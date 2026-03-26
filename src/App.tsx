@@ -213,7 +213,7 @@ export default function App() {
     const filteredProducts = selectedMonth === 'all'
       ? products
       : products.filter(p => p.createdAt.startsWith(selectedMonth));
-    const totalPurchase = filteredProducts.reduce((acc, p) => acc + (p.costPrice * p.stock), 0);
+    const totalPurchase = filteredProducts.reduce((acc, p) => acc + ((p.costPrice + (p.shippingPrice || 0)) * p.stock), 0);
 
     const netProfit = totalRevenue - (totalCOGS + totalExpenses);
 
@@ -251,7 +251,7 @@ export default function App() {
       if (!reports[month]) {
         reports[month] = { month, totalRevenue: 0, totalExpenses: 0, totalCOGS: 0, totalPurchase: 0, netProfit: 0 };
       }
-      reports[month].totalPurchase += (p.costPrice * p.stock);
+      reports[month].totalPurchase += ((p.costPrice + (p.shippingPrice || 0)) * p.stock);
     });
     
     return Object.values(reports)
@@ -634,6 +634,7 @@ export default function App() {
             {activeTab === 'customers' && (
               <CustomerManager 
                 customers={customers}
+                sales={sales}
                 onUpdateCustomer={handleUpdateCustomer}
                 onDeleteCustomer={handleDeleteCustomer}
               />
