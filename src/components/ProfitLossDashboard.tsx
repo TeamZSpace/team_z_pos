@@ -29,7 +29,6 @@ export const ProfitLossDashboard = ({ stats, selectedMonth, onMonthChange, month
     { name: 'Revenue', value: stats.totalRevenue, color: '#10b981' },
     { name: 'COGS', value: stats.totalCOGS, color: '#f59e0b' },
     { name: 'Expenses', value: stats.totalExpenses, color: '#ef4444' },
-    { name: 'Purchases', value: stats.totalPurchase, color: '#8b5cf6' },
     { name: 'Net Profit', value: stats.netProfit, color: '#3b82f6' },
   ];
 
@@ -57,7 +56,7 @@ export const ProfitLossDashboard = ({ stats, selectedMonth, onMonthChange, month
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-zinc-500 uppercase tracking-wider">Total Revenue</CardTitle>
@@ -83,15 +82,6 @@ export const ProfitLossDashboard = ({ stats, selectedMonth, onMonthChange, month
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(stats.totalExpenses)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500 uppercase tracking-wider">Total Purchase</CardTitle>
-            <Package className="h-4 w-4 text-violet-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.totalPurchase)}</div>
           </CardContent>
         </Card>
         <Card className={stats.netProfit >= 0 ? 'border-emerald-100 bg-emerald-50/30' : 'border-red-100 bg-red-50/30'}>
@@ -147,12 +137,11 @@ export const ProfitLossDashboard = ({ stats, selectedMonth, onMonthChange, month
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-left">Month</TableHead>
-                  <TableHead className="text-right">Total Revenue</TableHead>
-                  <TableHead className="text-right">Total COGS</TableHead>
-                  <TableHead className="text-right">Total Expenses</TableHead>
-                  <TableHead className="text-right">Total Purchase</TableHead>
-                  <TableHead className="text-right">Net Profit</TableHead>
+                  <TableHead>Month</TableHead>
+                  <TableHead>Total Revenue</TableHead>
+                  <TableHead>Total COGS</TableHead>
+                  <TableHead>Total Expenses</TableHead>
+                  <TableHead>Net Profit</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -171,12 +160,11 @@ export const ProfitLossDashboard = ({ stats, selectedMonth, onMonthChange, month
                     return (
                       <TableRow key={report.month}>
                         <TableCell className="font-medium">{monthLabel}</TableCell>
-                        <TableCell className="text-right text-emerald-600">{formatCurrency(report.totalRevenue)}</TableCell>
-                        <TableCell className="text-right text-amber-600">{formatCurrency(report.totalCOGS)}</TableCell>
-                        <TableCell className="text-right text-red-600">{formatCurrency(report.totalExpenses)}</TableCell>
-                        <TableCell className="text-right text-violet-600">{formatCurrency(report.totalPurchase)}</TableCell>
+                        <TableCell className="text-emerald-600">{formatCurrency(report.totalRevenue)}</TableCell>
+                        <TableCell className="text-amber-600">{formatCurrency(report.totalCOGS)}</TableCell>
+                        <TableCell className="text-red-600">{formatCurrency(report.totalExpenses)}</TableCell>
                         <TableCell className={cn(
-                          "text-right font-bold",
+                          "font-bold",
                           report.netProfit >= 0 ? "text-emerald-700" : "text-red-700"
                         )}>
                           {formatCurrency(report.netProfit)}
