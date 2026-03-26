@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   LayoutDashboard, 
   Package, 
@@ -449,6 +449,34 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
+  const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string);
+        
+        if (data.products) setProducts(data.products);
+        if (data.sales) setSales(data.sales);
+        if (data.expenses) setExpenses(data.expenses);
+        if (data.categories) setCategories(data.categories);
+        if (data.customers) setCustomers(data.customers);
+        if (data.suppliers) setSuppliers(data.suppliers);
+        if (data.businessProfile) setBusinessProfile(data.businessProfile);
+        
+        alert('Data imported successfully! ဒေတာများ အောင်မြင်စွာ ထည့်သွင်းပြီးပါပြီ။');
+      } catch (error) {
+        console.error('Import error:', error);
+        alert('Failed to import data. Please check the file format. ဒေတာ ထည့်သွင်းမှု မအောင်မြင်ပါ။ ဖိုင်ပုံစံ မှန်မမှန် ပြန်စစ်ပေးပါ။');
+      }
+    };
+    reader.readAsText(file);
+    // Reset input
+    event.target.value = '';
+  };
+
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'inventory', label: 'Inventory', icon: Package },
@@ -682,6 +710,22 @@ export default function App() {
                         <Button variant="outline" onClick={handleExportData} className="w-full">
                           Download Backup
                         </Button>
+                      </div>
+                      <div className="space-y-4">
+                        <h3 className="font-medium">Import Data</h3>
+                        <p className="text-sm text-zinc-500">Restore your records from a previously downloaded JSON backup file.</p>
+                        <div className="relative">
+                          <input
+                            type="file"
+                            accept=".json"
+                            onChange={handleImportData}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            id="import-backup"
+                          />
+                          <Button variant="outline" className="w-full">
+                            Upload Backup File
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
