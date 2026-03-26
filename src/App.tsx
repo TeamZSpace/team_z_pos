@@ -209,15 +209,22 @@ export default function App() {
     const totalRevenue = filteredSales.reduce((acc, s) => acc + s.totalRevenue, 0);
     const totalCOGS = filteredSales.reduce((acc, s) => acc + s.totalCost, 0);
     const totalExpenses = filteredExpenses.reduce((acc, e) => acc + e.amount, 0);
+    
+    const filteredProducts = selectedMonth === 'all'
+      ? products
+      : products.filter(p => p.createdAt.startsWith(selectedMonth));
+    const totalPurchase = filteredProducts.reduce((acc, p) => acc + (p.costPrice * p.stock), 0);
+
     const netProfit = totalRevenue - (totalCOGS + totalExpenses);
 
     return {
       totalRevenue,
       totalCOGS,
       totalExpenses,
+      totalPurchase,
       netProfit,
     };
-  }, [sales, expenses, selectedMonth]);
+  }, [sales, expenses, products, selectedMonth]);
 
   const monthlyReports = useMemo<MonthlyReport[]>(() => {
     const reports: Record<string, MonthlyReport> = {};
@@ -225,7 +232,7 @@ export default function App() {
     sales.forEach(s => {
       const month = s.date.substring(0, 7); // YYYY-MM
       if (!reports[month]) {
-        reports[month] = { month, totalRevenue: 0, totalExpenses: 0, totalCOGS: 0, netProfit: 0 };
+        reports[month] = { month, totalRevenue: 0, totalExpenses: 0, totalCOGS: 0, totalPurchase: 0, netProfit: 0 };
       }
       reports[month].totalRevenue += s.totalRevenue;
       reports[month].totalCOGS += s.totalCost;
@@ -234,15 +241,23 @@ export default function App() {
     expenses.forEach(e => {
       const month = e.date.substring(0, 7); // YYYY-MM
       if (!reports[month]) {
-        reports[month] = { month, totalRevenue: 0, totalExpenses: 0, totalCOGS: 0, netProfit: 0 };
+        reports[month] = { month, totalRevenue: 0, totalExpenses: 0, totalCOGS: 0, totalPurchase: 0, netProfit: 0 };
       }
       reports[month].totalExpenses += e.amount;
+    });
+
+    products.forEach(p => {
+      const month = p.createdAt.substring(0, 7); // YYYY-MM
+      if (!reports[month]) {
+        reports[month] = { month, totalRevenue: 0, totalExpenses: 0, totalCOGS: 0, totalPurchase: 0, netProfit: 0 };
+      }
+      reports[month].totalPurchase += (p.costPrice * p.stock);
     });
     
     return Object.values(reports)
       .map(r => ({ ...r, netProfit: r.totalRevenue - (r.totalCOGS + r.totalExpenses) }))
       .sort((a, b) => b.month.localeCompare(a.month));
-  }, [sales, expenses]);
+  }, [sales, expenses, products]);
 
   // Handlers
   const handleAddProduct = async (productData: Omit<Product, 'id'>) => {
