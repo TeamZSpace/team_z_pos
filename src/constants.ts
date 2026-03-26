@@ -11,4 +11,4 @@ export const EXPENSE_TYPES = [
 
 export const DEFAULT_CATEGORIES = ['Supplements', 'Skincare', 'Other'] as const;
 
-export const PAYMENT_METHODS = ['KPay', 'WavePay', 'Bank Transfer', 'Cash on Delivery'] as const;
+export const PAYMENT_METHODS = ['KPay', 'WavePay', 'AYA Pay', 'UAB Pay', 'Bank Transfer', 'Cash on Delivery'] as const;
