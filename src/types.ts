@@ -82,6 +82,7 @@ export interface DashboardStats {
   totalRevenue: number;
   totalCOGS: number;
   totalExpenses: number;
+  totalPurchase: number;
   netProfit: number;
 }
 
@@ -90,5 +91,6 @@ export interface MonthlyReport {
   totalRevenue: number;
   totalExpenses: number;
   totalCOGS: number;
+  totalPurchase: number;
   netProfit: number;
 }
