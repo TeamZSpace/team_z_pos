@@ -103,12 +103,24 @@ export const ExpenseTracker = ({ expenses, onAddExpense, onUpdateExpense, onDele
   return (
     <div className="space-y-6">
       {/* Expense Analysis Dashboard */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {EXPENSE_TYPES.filter(type => expenseByType[type] > 0).slice(0, 3).map(type => (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="bg-zinc-900 text-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-medium text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+              <TrendingDown className="h-4 w-4 text-red-400" />
+              Monthly Total
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(monthlyTotal)}</div>
+            <p className="text-[10px] text-zinc-500 mt-1">Total expenses for {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
+          </CardContent>
+        </Card>
+        {EXPENSE_TYPES.filter(type => expenseByType[type] > 0).map(type => (
           <div key={type}>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+                <CardTitle className="text-xs font-medium text-zinc-500 uppercase tracking-wider flex items-center gap-2">
                   <PieChart className="h-4 w-4 text-zinc-400" />
                   {type}
                 </CardTitle>
@@ -121,8 +133,8 @@ export const ExpenseTracker = ({ expenses, onAddExpense, onUpdateExpense, onDele
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-      <div className="lg:col-span-1">
+      <div className="grid gap-6 xl:grid-cols-4">
+        <div className="xl:col-span-1">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -218,7 +230,7 @@ export const ExpenseTracker = ({ expenses, onAddExpense, onUpdateExpense, onDele
         </Card>
       </div>
 
-      <div className="lg:col-span-2">
+      <div className="xl:col-span-3">
         <Card>
           <CardHeader>
             <CardTitle>Expense History</CardTitle>

@@ -30,7 +30,9 @@ export const SalesEntry = ({ products, onAddSale, onUpdateSale, onDeleteSale, sa
     orderName: '',
     phone: '',
     address: '',
-    paymentMethod: 'KPay'
+    paymentMethod: 'KPay',
+    saleDate: new Date().toISOString().split('T')[0],
+    deliveryDate: '',
   });
 
   const selectedProduct = products.find((p) => p.id === selectedProductId);
@@ -84,6 +86,8 @@ export const SalesEntry = ({ products, onAddSale, onUpdateSale, onDeleteSale, sa
       totalRevenue,
       totalCost,
       date: new Date().toISOString(),
+      saleDate: customerInfo.saleDate,
+      deliveryDate: customerInfo.deliveryDate,
     };
 
     if (editingSaleId) {
@@ -100,7 +104,9 @@ export const SalesEntry = ({ products, onAddSale, onUpdateSale, onDeleteSale, sa
       orderName: '',
       phone: '',
       address: '',
-      paymentMethod: 'KPay'
+      paymentMethod: 'KPay',
+      saleDate: new Date().toISOString().split('T')[0],
+      deliveryDate: '',
     });
   };
 
@@ -111,7 +117,9 @@ export const SalesEntry = ({ products, onAddSale, onUpdateSale, onDeleteSale, sa
       orderName: sale.customer.orderName,
       phone: sale.customer.phone,
       address: sale.customer.address,
-      paymentMethod: sale.customer.paymentMethod || 'KPay'
+      paymentMethod: sale.customer.paymentMethod || 'KPay',
+      saleDate: sale.saleDate || new Date(sale.date).toISOString().split('T')[0],
+      deliveryDate: sale.deliveryDate || '',
     });
     setCurrentItems(sale.items || []);
     // Scroll to top to see the form
@@ -194,6 +202,26 @@ export const SalesEntry = ({ products, onAddSale, onUpdateSale, onDeleteSale, sa
                     ))}
                   </Select>
                 </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="saleDate">Sale Date</Label>
+                <Input
+                  id="saleDate"
+                  type="date"
+                  value={customerInfo.saleDate}
+                  onChange={(e) => setCustomerInfo({ ...customerInfo, saleDate: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="deliveryDate">Delivery Date</Label>
+                <Input
+                  id="deliveryDate"
+                  type="date"
+                  value={customerInfo.deliveryDate}
+                  onChange={(e) => setCustomerInfo({ ...customerInfo, deliveryDate: e.target.value })}
+                />
               </div>
             </div>
             <div className="space-y-2">
@@ -325,6 +353,8 @@ export const SalesEntry = ({ products, onAddSale, onUpdateSale, onDeleteSale, sa
                   <TableHead>Date</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead>Items</TableHead>
+                  <TableHead>Address</TableHead>
+                  <TableHead>Delivery Date</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -341,7 +371,7 @@ export const SalesEntry = ({ products, onAddSale, onUpdateSale, onDeleteSale, sa
                     <TableRow key={sale.id}>
                       <TableCell className="font-mono text-xs font-bold">{sale.orderNumber || 'N/A'}</TableCell>
                       <TableCell className="text-xs text-zinc-500">
-                        {new Date(sale.date).toLocaleDateString()}
+                        {sale.saleDate ? new Date(sale.saleDate).toLocaleDateString() : new Date(sale.date).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
@@ -363,6 +393,12 @@ export const SalesEntry = ({ products, onAddSale, onUpdateSale, onDeleteSale, sa
                             </span>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell className="text-xs max-w-[150px] truncate" title={sale.customer?.address}>
+                        {sale.customer?.address || '-'}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {sale.deliveryDate ? new Date(sale.deliveryDate).toLocaleDateString() : '-'}
                       </TableCell>
                       <TableCell className="font-bold text-emerald-600">
                         {formatCurrency(sale.totalRevenue)}

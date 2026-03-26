@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Pencil, Trash2, User } from 'lucide-react';
-import { Customer } from '../types';
+import { Customer, Sale } from '../types';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/Card';
@@ -11,17 +11,26 @@ import { convertMyanmarToEnglish } from '../lib/utils';
 
 interface CustomerManagerProps {
   customers: Customer[];
+  sales: Sale[];
   onUpdateCustomer: (id: string, customerData: Partial<Customer>) => void;
   onDeleteCustomer: (id: string) => void;
 }
 
 export function CustomerManager({ 
   customers, 
+  sales,
   onUpdateCustomer, 
   onDeleteCustomer 
 }: CustomerManagerProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+
+  const getSalesCount = (facebookName: string, orderName: string) => {
+    return sales.filter(s => 
+      s.customer.facebookName === facebookName && 
+      s.customer.orderName === orderName
+    ).length;
+  };
 
   const filteredCustomers = customers.filter(c => 
     c.facebookName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -59,6 +68,7 @@ export function CustomerManager({
                 <TableHead>Order Name</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Address</TableHead>
+                <TableHead>Sales Count</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -69,6 +79,9 @@ export function CustomerManager({
                   <TableCell>{customer.orderName}</TableCell>
                   <TableCell>{customer.phone}</TableCell>
                   <TableCell className="max-w-[200px] truncate">{customer.address}</TableCell>
+                  <TableCell className="text-center font-bold text-zinc-900">
+                    {getSalesCount(customer.facebookName, customer.orderName)}
+                  </TableCell>
                   <TableCell>
                     <div className="flex justify-center gap-2">
                       <Button 
@@ -92,7 +105,7 @@ export function CustomerManager({
               ))}
               {filteredCustomers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-zinc-500">
+                  <TableCell colSpan={6} className="text-center py-8 text-zinc-500">
                     No customers found.
                   </TableCell>
                 </TableRow>
