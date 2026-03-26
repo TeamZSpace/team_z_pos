@@ -56,6 +56,8 @@ export interface Sale {
   totalRevenue: number;
   totalCost: number;
   date: string;
+  saleDate?: string;
+  deliveryDate?: string;
   paymentVoucherUrl?: string;
 }
 
