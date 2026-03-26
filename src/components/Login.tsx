@@ -82,7 +82,7 @@ export function Login({ onLogin }: LoginProps) {
         </CardContent>
         <CardFooter className="flex flex-col space-y-2">
           <p className="text-xs text-left text-zinc-400">
-            Secure Access • MMK POS System
+            Secure Access • Team Z Space POS System
           </p>
         </CardFooter>
       </Card>

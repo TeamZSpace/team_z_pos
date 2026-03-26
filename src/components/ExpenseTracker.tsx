@@ -103,20 +103,7 @@ export const ExpenseTracker = ({ expenses, onAddExpense, onUpdateExpense, onDele
   return (
     <div className="space-y-6">
       {/* Expense Analysis Dashboard */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-zinc-900 text-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-400 uppercase tracking-wider flex items-center gap-2">
-              <TrendingDown className="h-4 w-4" />
-              Monthly Total
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(monthlyTotal)}</div>
-            <p className="text-xs text-zinc-500 mt-1">For {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
-          </CardContent>
-        </Card>
-
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {EXPENSE_TYPES.filter(type => expenseByType[type] > 0).slice(0, 3).map(type => (
           <div key={type}>
             <Card>
