@@ -1,6 +1,6 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { Sale } from "../types";
 'use client';
+
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 
 
