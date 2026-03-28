@@ -1,11 +1,8 @@
-'use client';
-
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-
+import { GoogleGenAI } from "@google/genai";
+import { Sale } from "../types";
 
 // Initialize the SDK using the environment variable provided by the platform
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GOOGLE_AI_API_KEY);
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export async function getSalesSummary(salesData: Sale[]) {
   // Simplify data for the prompt to avoid token limits
