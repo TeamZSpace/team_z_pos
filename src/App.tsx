@@ -32,7 +32,7 @@ import { Card, CardHeader, CardTitle, CardContent } from './components/ui/Card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from './components/ui/Dialog';
 import { Login } from './components/Login';
 import { Product, Sale, Expense, DashboardStats, Category, Customer, Supplier, MonthlyReport, JournalEntry, Account } from './types';
-import { cn, generateOrderNumber } from '@/src/lib/utils';
+import { cn, generateOrderNumber, generateUUID } from '@/src/lib/utils';
 import { DEFAULT_CATEGORIES, DEFAULT_ACCOUNTS } from './constants';
 import { AccountingModule } from './components/AccountingModule';
 import { AISummary } from './components/AISummary';
@@ -40,7 +40,64 @@ import { supabase, isSupabaseConfigured } from '@/src/lib/supabase';
 
 type Tab = 'dashboard' | 'inventory' | 'sales' | 'expenses' | 'categories' | 'customers' | 'suppliers' | 'accounting' | 'settings';
 
+// Error Boundary Component
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-zinc-50 p-4">
+          <Card className="max-w-md w-full">
+            <CardHeader>
+              <CardTitle className="text-red-600 flex items-center gap-2">
+                <X className="h-5 w-5" />
+                Something went wrong
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-zinc-600">
+                The application encountered an error. This might be due to incorrect configuration or a temporary issue.
+              </p>
+              <div className="bg-zinc-100 p-3 rounded text-xs font-mono overflow-auto max-h-40">
+                {this.state.error?.toString()}
+              </div>
+              <Button 
+                className="w-full" 
+                onClick={() => window.location.reload()}
+              >
+                Reload Application
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 export default function App() {
+  return (
+    <ErrorBoundary>
+      <MainApp />
+    </ErrorBoundary>
+  );
+}
+
+function MainApp() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return sessionStorage.getItem('mmk_auth') === 'true';
   });
@@ -90,7 +147,7 @@ export default function App() {
   const [categories, setCategories] = useState<Category[]>(() => {
     const saved = localStorage.getItem('mmk_categories');
     if (saved) return JSON.parse(saved);
-    return DEFAULT_CATEGORIES.map(name => ({ id: crypto.randomUUID(), name }));
+    return DEFAULT_CATEGORIES.map(name => ({ id: generateUUID(), name }));
   });
 
   const [customers, setCustomers] = useState<Customer[]>(() => {
@@ -320,7 +377,7 @@ export default function App() {
   const handleAddProduct = async (productData: Omit<Product, 'id'>) => {
     const newProduct: Product = {
       ...productData,
-      id: crypto.randomUUID(),
+      id: generateUUID(),
     };
     setProducts([...products, newProduct]);
   };
@@ -344,7 +401,7 @@ export default function App() {
     
     const newSale: Sale = {
       ...saleData,
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       orderNumber: generateOrderNumber(todayOrders.length),
     };
     
@@ -367,7 +424,7 @@ export default function App() {
     const existingCustomer = customers.find(c => c.phone === saleData.customer.phone);
     if (!existingCustomer) {
       const newCustomer: Customer = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         facebookName: saleData.customer.facebookName,
         orderName: saleData.customer.orderName,
         phone: saleData.customer.phone,
@@ -438,7 +495,7 @@ export default function App() {
   const handleAddExpense = async (expenseData: Omit<Expense, 'id'>) => {
     const newExpense: Expense = {
       ...expenseData,
-      id: crypto.randomUUID(),
+      id: generateUUID(),
     };
     setExpenses([newExpense, ...expenses]);
   };
@@ -456,7 +513,7 @@ export default function App() {
   };
 
   const handleAddCategory = (name: string, parentId?: string) => {
-    setCategories([...categories, { id: crypto.randomUUID(), name, parentId }]);
+    setCategories([...categories, { id: generateUUID(), name, parentId }]);
   };
 
   const handleUpdateCategory = (id: string, name: string) => {
@@ -484,7 +541,7 @@ export default function App() {
   };
 
   const handleAddSupplier = (name: string, phone: string) => {
-    setSuppliers([...suppliers, { id: crypto.randomUUID(), name, phone }]);
+    setSuppliers([...suppliers, { id: generateUUID(), name, phone }]);
   };
 
   const handleUpdateSupplier = (id: string, name: string, phone: string) => {

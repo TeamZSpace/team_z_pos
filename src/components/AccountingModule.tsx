@@ -17,7 +17,7 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from './ui/Card';
 import { Button } from './ui/Button';
 import { JournalEntry, Account, Customer, Supplier, TransactionType } from '../types';
-import { cn } from '../lib/utils';
+import { cn, generateUUID } from '../lib/utils';
 
 interface AccountingModuleProps {
   journalEntries: JournalEntry[];
@@ -100,7 +100,7 @@ export function AccountingModule({
 
     onAddEntry({
       ...newEntry as JournalEntry,
-      id: crypto.randomUUID(),
+      id: generateUUID(),
     });
     setIsAddingEntry(false);
     setNewEntry({

@@ -41,8 +41,21 @@ if (finalUrl && !finalUrl.startsWith('http://') && !finalUrl.startsWith('https:/
   finalUrl = 'https://' + finalUrl;
 }
 
-export const supabase = (isValidUrl(finalUrl) && supabaseAnonKey) 
-  ? createClient(finalUrl!, supabaseAnonKey)
-  : null;
+const initializeSupabase = () => {
+  if (!isValidUrl(finalUrl) || !supabaseAnonKey) {
+    console.warn('Supabase is not fully configured. Missing URL or Anon Key.');
+    return null;
+  }
+  
+  try {
+    console.log('Initializing Supabase client with URL:', finalUrl);
+    return createClient(finalUrl!, supabaseAnonKey);
+  } catch (error) {
+    console.error('Failed to initialize Supabase client:', error);
+    return null;
+  }
+};
+
+export const supabase = initializeSupabase();
 
 export const isSupabaseConfigured = () => !!supabase;
