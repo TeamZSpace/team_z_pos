@@ -31,11 +31,13 @@ import { Button } from './components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from './components/ui/Card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from './components/ui/Dialog';
 import { Login } from './components/Login.tsx';
-import { Product, Sale, Expense, DashboardStats, Category, Customer, Supplier, MonthlyReport } from './types';
+import { Product, Sale, Expense, DashboardStats, Category, Customer, Supplier, MonthlyReport, JournalEntry, Account } from './types';
 import { cn, generateOrderNumber } from './lib/utils';
-import { DEFAULT_CATEGORIES } from './constants';
+import { DEFAULT_CATEGORIES, DEFAULT_ACCOUNTS } from './constants';
+import { AccountingModule } from './components/AccountingModule';
+import { AISummary } from './components/AISummary';
 
-type Tab = 'dashboard' | 'inventory' | 'sales' | 'expenses' | 'categories' | 'customers' | 'suppliers' | 'settings';
+type Tab = 'dashboard' | 'inventory' | 'sales' | 'expenses' | 'categories' | 'customers' | 'suppliers' | 'accounting' | 'settings';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -98,6 +100,15 @@ export default function App() {
   const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
     const saved = localStorage.getItem('mmk_suppliers');
     return saved ? JSON.parse(saved) : [];
+  });
+
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(() => {
+    const saved = localStorage.getItem('mmk_journal_entries');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [accounts] = useState<Account[]>(() => {
+    return DEFAULT_ACCOUNTS;
   });
 
   const [businessProfile, setBusinessProfile] = useState(() => {
@@ -191,6 +202,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('mmk_suppliers', JSON.stringify(suppliers));
   }, [suppliers]);
+
+  useEffect(() => {
+    localStorage.setItem('mmk_journal_entries', JSON.stringify(journalEntries));
+  }, [journalEntries]);
 
   useEffect(() => {
     localStorage.setItem('mmk_business_profile', JSON.stringify(businessProfile));
@@ -500,6 +515,7 @@ export default function App() {
     { id: 'categories', label: 'Categories', icon: Tags },
     { id: 'customers', label: 'Customers', icon: Users },
     { id: 'suppliers', label: 'Suppliers', icon: UserCheck },
+    { id: 'accounting', label: 'Accounting', icon: CreditCard },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -589,12 +605,15 @@ export default function App() {
         <div className="flex-1 overflow-auto p-4 lg:p-8">
           <div className="max-w-6xl mx-auto">
             {activeTab === 'dashboard' && (
-              <ProfitLossDashboard 
-                stats={stats} 
-                selectedMonth={selectedMonth}
-                onMonthChange={setSelectedMonth}
-                monthlyReports={monthlyReports}
-              />
+              <div className="space-y-6">
+                <AISummary sales={sales} />
+                <ProfitLossDashboard 
+                  stats={stats} 
+                  selectedMonth={selectedMonth}
+                  onMonthChange={setSelectedMonth}
+                  monthlyReports={monthlyReports}
+                />
+              </div>
             )}
             {activeTab === 'inventory' && (
               <InventoryManager 
@@ -645,6 +664,16 @@ export default function App() {
                 onAddSupplier={handleAddSupplier}
                 onUpdateSupplier={handleUpdateSupplier}
                 onDeleteSupplier={handleDeleteSupplier}
+              />
+            )}
+            {activeTab === 'accounting' && (
+              <AccountingModule 
+                journalEntries={journalEntries}
+                accounts={accounts}
+                customers={customers}
+                suppliers={suppliers}
+                onAddEntry={(entry) => setJournalEntries([entry, ...journalEntries])}
+                onDeleteEntry={(id) => setJournalEntries(journalEntries.filter(e => e.id !== id))}
               />
             )}
             {activeTab === 'settings' && (

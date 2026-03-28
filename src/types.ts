@@ -61,6 +61,29 @@ export interface Sale {
   paymentVoucherUrl?: string;
 }
 
+export type AccountType = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense';
+
+export interface Account {
+  id: string;
+  name: string;
+  type: AccountType;
+  code: string;
+}
+
+export type TransactionType = 'Income' | 'Expense' | 'Payable' | 'Receivable';
+
+export interface JournalEntry {
+  id: string;
+  date: string;
+  debit_account_id: string;
+  credit_account_id: string;
+  amount: number;
+  reference_type: TransactionType;
+  description: string;
+  reference_id?: string; // Link to saleId or expenseId
+  contact_id?: string; // Link to customerId or supplierId
+}
+
 export type ExpenseType = 
   | 'Packaging' 
   | 'Deliveries' 
