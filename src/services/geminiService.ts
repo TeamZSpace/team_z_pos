@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { Sale } from "../types";
 
 // Initialize the SDK using the environment variable provided by the platform
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export async function getSalesSummary(salesData: Sale[]) {
   // Simplify data for the prompt to avoid token limits
@@ -18,7 +18,7 @@ export async function getSalesSummary(salesData: Sale[]) {
                   အဖြေကို Markdown format နဲ့ ပေးပါ။`;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await genAI.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
     });
