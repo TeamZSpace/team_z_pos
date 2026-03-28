@@ -957,9 +957,11 @@ function MainApp() {
                         {!isSupabaseConfigured() && (
                           <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
                             <p className="text-xs text-red-600 font-medium">Supabase is not configured.</p>
-                            <p className="text-[10px] text-red-500 mt-1">
-                              Settings menu ထဲမှာ VITE_SUPABASE_URL နဲ့ VITE_SUPABASE_ANON_KEY ကို ထည့်သွင်းပေးပါ။
-                            </p>
+                            <div className="text-[11px] text-red-500 mt-1 space-y-1">
+                              <p>• AI Studio မှာဆိုရင်: ညာဘက်အပေါ်က Gear Icon (Settings) &gt; Environment Variables ထဲမှာ ထည့်ပါ။</p>
+                              <p>• Vercel မှာဆိုရင်: Project Settings &gt; Environment Variables ထဲမှာ ထည့်ပါ။</p>
+                              <p className="font-semibold mt-1 italic">VITE_SUPABASE_URL နဲ့ VITE_SUPABASE_ANON_KEY ကို အသုံးပြုပေးပါ။</p>
+                            </div>
                           </div>
                         )}
                       </div>
