@@ -21,8 +21,8 @@ const cleanValue = (val: string | undefined) => {
   return cleaned || undefined;
 };
 
-const supabaseUrl = cleanValue(import.meta.env.VITE_SUPABASE_URL);
-const supabaseAnonKey = cleanValue(import.meta.env.VITE_SUPABASE_ANON_KEY);
+const supabaseUrl = cleanValue(import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL);
+const supabaseAnonKey = cleanValue(import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
 // Robust check to ensure URL is valid before initializing
 const isValidUrl = (url: string | undefined) => {
