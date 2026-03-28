@@ -30,13 +30,13 @@ import { SupplierManager } from './components/SupplierManager';
 import { Button } from './components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from './components/ui/Card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from './components/ui/Dialog';
-import { Login } from './components/Login.tsx';
+import { Login } from './components/Login';
 import { Product, Sale, Expense, DashboardStats, Category, Customer, Supplier, MonthlyReport, JournalEntry, Account } from './types';
-import { cn, generateOrderNumber } from './lib/utils';
+import { cn, generateOrderNumber } from '@/src/lib/utils';
 import { DEFAULT_CATEGORIES, DEFAULT_ACCOUNTS } from './constants';
 import { AccountingModule } from './components/AccountingModule';
 import { AISummary } from './components/AISummary';
-import { supabase, isSupabaseConfigured } from './lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/src/lib/supabase';
 
 type Tab = 'dashboard' | 'inventory' | 'sales' | 'expenses' | 'categories' | 'customers' | 'suppliers' | 'accounting' | 'settings';
 
@@ -822,7 +822,12 @@ export default function App() {
                           Test Supabase Connection
                         </Button>
                         {!isSupabaseConfigured() && (
-                          <p className="text-xs text-red-500">Supabase is not configured. Please set environment variables.</p>
+                          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                            <p className="text-xs text-red-600 font-medium">Supabase is not configured.</p>
+                            <p className="text-[10px] text-red-500 mt-1">
+                              Settings menu ထဲမှာ VITE_SUPABASE_URL နဲ့ VITE_SUPABASE_ANON_KEY ကို ထည့်သွင်းပေးပါ။
+                            </p>
+                          </div>
                         )}
                       </div>
                       <div className="space-y-4">
