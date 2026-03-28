@@ -36,6 +36,7 @@ import { cn, generateOrderNumber } from './lib/utils';
 import { DEFAULT_CATEGORIES, DEFAULT_ACCOUNTS } from './constants';
 import { AccountingModule } from './components/AccountingModule';
 import { AISummary } from './components/AISummary';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
 
 type Tab = 'dashboard' | 'inventory' | 'sales' | 'expenses' | 'categories' | 'customers' | 'suppliers' | 'accounting' | 'settings';
 
@@ -117,6 +118,7 @@ export default function App() {
   });
 
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSupabaseSyncing, setIsSupabaseSyncing] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -161,6 +163,46 @@ export default function App() {
       alert('Sync လုပ်ဆောင်ချက် မအောင်မြင်ပါ။ အင်တာနက် ချိတ်ဆက်မှု သို့မဟုတ် URL မှန်ကန်မှုကို ပြန်စစ်ပေးပါ။ Error: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const syncToSupabase = async () => {
+    if (!supabase) {
+      alert('Please set your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the environment first.');
+      return;
+    }
+
+    setIsSupabaseSyncing(true);
+    try {
+      // For simplicity, we'll upsert all data to a 'pos_data' table or separate tables
+      // Here we'll try to upsert to separate tables if they exist
+      const tables = [
+        { name: 'products', data: products },
+        { name: 'sales', data: sales },
+        { name: 'expenses', data: expenses },
+        { name: 'categories', data: categories },
+        { name: 'customers', data: customers },
+        { name: 'suppliers', data: suppliers },
+        { name: 'journal_entries', data: journalEntries },
+        { name: 'business_profile', data: [businessProfile] }
+      ];
+
+      for (const table of tables) {
+        if (table.data.length === 0) continue;
+        
+        const { error } = await supabase
+          .from(table.name)
+          .upsert(table.data, { onConflict: 'id' });
+        
+        if (error) throw error;
+      }
+
+      alert('Data successfully synced to Supabase! Supabase ထဲကို ဒေတာများ အောင်မြင်စွာ ထည့်သွင်းပြီးပါပြီ။');
+    } catch (error) {
+      console.error('Supabase sync error:', error);
+      alert('Supabase sync failed. Please check your table permissions and internet connection. Error: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setIsSupabaseSyncing(false);
     }
   };
 
@@ -748,6 +790,40 @@ export default function App() {
                         >
                           {isSyncing ? 'Syncing...' : 'Sync to Google Sheets'}
                         </Button>
+                      </div>
+                      <div className="space-y-4">
+                        <h3 className="font-medium">Supabase Cloud Sync</h3>
+                        <p className="text-sm text-zinc-500">Backup all your records to your connected Supabase database.</p>
+                        <Button 
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                          onClick={syncToSupabase}
+                          disabled={isSupabaseSyncing}
+                        >
+                          {isSupabaseSyncing ? 'Syncing...' : 'Sync to Supabase'}
+                        </Button>
+                        <Button 
+                          variant="outline"
+                          className="w-full mt-2"
+                          onClick={async () => {
+                            if (!supabase) {
+                              alert('Supabase is not configured.');
+                              return;
+                            }
+                            try {
+                              const { data, error } = await supabase.from('products').select('*').limit(1);
+                              if (error) throw error;
+                              alert('Connection successful! Supabase နှင့် ချိတ်ဆက်မှု အောင်မြင်ပါသည်။');
+                            } catch (error) {
+                              console.error('Supabase connection error:', error);
+                              alert('Connection failed. Please check your keys and table permissions. Error: ' + (error instanceof Error ? error.message : 'Unknown error'));
+                            }
+                          }}
+                        >
+                          Test Supabase Connection
+                        </Button>
+                        {!isSupabaseConfigured() && (
+                          <p className="text-xs text-red-500">Supabase is not configured. Please set environment variables.</p>
+                        )}
                       </div>
                       <div className="space-y-4">
                         <h3 className="font-medium">Export Data</h3>
