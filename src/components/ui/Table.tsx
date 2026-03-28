@@ -41,7 +41,7 @@ export const TableRow = ({ className, ...props }: React.HTMLAttributes<HTMLTable
   />
 );
 
-export const TableHead = ({ className, ...props }: React.HTMLAttributes<HTMLTableCellElement>) => (
+export const TableHead = ({ className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) => (
   <th
     className={cn(
       "h-12 px-4 text-center align-middle font-medium text-zinc-500 [&:has([role=checkbox])]:pr-0",
@@ -51,7 +51,7 @@ export const TableHead = ({ className, ...props }: React.HTMLAttributes<HTMLTabl
   />
 );
 
-export const TableCell = ({ className, ...props }: React.HTMLAttributes<HTMLTableCellElement>) => (
+export const TableCell = ({ className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) => (
   <td
     className={cn("p-4 text-center align-middle [&:has([role=checkbox])]:pr-0", className)}
     {...props}
