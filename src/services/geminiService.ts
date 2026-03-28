@@ -1,5 +1,8 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Sale } from "../types";
+'use client';
+
+
 
 // Initialize the SDK using the environment variable provided by the platform
 const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GOOGLE_AI_API_KEY);
