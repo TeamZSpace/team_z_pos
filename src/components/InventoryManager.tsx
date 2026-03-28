@@ -156,7 +156,7 @@ export const InventoryManager = ({
               <TableBody>
                 {filteredProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-zinc-500">
+                    <TableCell colSpan={11} className="text-center py-8 text-zinc-500">
                       No products found.
                     </TableCell>
                   </TableRow>

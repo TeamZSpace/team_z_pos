@@ -362,7 +362,7 @@ export const SalesEntry = ({ products, onAddSale, onUpdateSale, onDeleteSale, sa
               <TableBody>
                 {filteredSales.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-zinc-500">
+                    <TableCell colSpan={8} className="text-center py-8 text-zinc-500">
                       {searchQuery ? 'No orders match your search.' : 'No orders recorded yet.'}
                     </TableCell>
                   </TableRow>

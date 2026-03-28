@@ -106,7 +106,7 @@ export const ProfitLossDashboard = ({ stats, selectedMonth, onMonthChange, month
           <CardTitle>Financial Overview</CardTitle>
         </CardHeader>
         <CardContent className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="name" />
@@ -147,7 +147,7 @@ export const ProfitLossDashboard = ({ stats, selectedMonth, onMonthChange, month
               <TableBody>
                 {monthlyReports.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-zinc-500">
+                    <TableCell colSpan={5} className="text-center py-8 text-zinc-500">
                       No reports available yet
                     </TableCell>
                   </TableRow>
