@@ -275,8 +275,6 @@ function MainApp() {
 
     setIsSupabaseSyncing(true);
     try {
-      // For simplicity, we'll upsert all data to a 'pos_data' table or separate tables
-      // Here we'll try to upsert to separate tables if they exist
       const tables = [
         { name: 'products', data: products },
         { name: 'sales', data: sales },
@@ -285,7 +283,7 @@ function MainApp() {
         { name: 'customers', data: customers },
         { name: 'suppliers', data: suppliers },
         { name: 'journal_entries', data: journalEntries },
-        { name: 'business_profile', data: [businessProfile] }
+        { name: 'business_profile', data: [{ ...businessProfile, id: 'default' }] }
       ];
 
       for (const table of tables) {
@@ -954,6 +952,63 @@ function MainApp() {
                         >
                           Test Supabase Connection
                         </Button>
+
+                        <div className="mt-4 p-4 bg-zinc-900 rounded-lg overflow-hidden">
+                          <div className="flex justify-between items-center mb-2">
+                            <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Supabase SQL Schema</h4>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-7 text-[10px] text-zinc-300 hover:text-white hover:bg-zinc-800"
+                              onClick={() => {
+                                const sql = `-- Supabase SQL Editor ထဲမှာ ဒါကို Copy ကူးပြီး Run ပေးပါ
+
+-- 1. Create Tables (If not exist)
+CREATE TABLE IF NOT EXISTS products (id TEXT PRIMARY KEY, name TEXT, category TEXT, subCategory TEXT, costPrice NUMERIC, shippingPrice NUMERIC, sellingPrice NUMERIC, stock INTEGER, madeIn TEXT, supplierId TEXT, createdAt TEXT);
+CREATE TABLE IF NOT EXISTS sales (id TEXT PRIMARY KEY, orderNumber TEXT, items JSONB, customer JSONB, totalRevenue NUMERIC, totalCost NUMERIC, date TEXT, saleDate TEXT, deliveryDate TEXT, paymentVoucherUrl TEXT);
+CREATE TABLE IF NOT EXISTS expenses (id TEXT PRIMARY KEY, type TEXT, amount NUMERIC, description TEXT, date TEXT, voucherUrl TEXT);
+CREATE TABLE IF NOT EXISTS categories (id TEXT PRIMARY KEY, name TEXT, parentId TEXT);
+CREATE TABLE IF NOT EXISTS customers (id TEXT PRIMARY KEY, facebookName TEXT, orderName TEXT, phone TEXT, address TEXT);
+CREATE TABLE IF NOT EXISTS suppliers (id TEXT PRIMARY KEY, name TEXT, phone TEXT);
+CREATE TABLE IF NOT EXISTS journal_entries (id TEXT PRIMARY KEY, date TEXT, debit_account_id TEXT, credit_account_id TEXT, amount NUMERIC, reference_type TEXT, description TEXT, reference_id TEXT, contact_id TEXT);
+CREATE TABLE IF NOT EXISTS business_profile (id TEXT PRIMARY KEY, name TEXT, address TEXT, phone TEXT, googleSheetUrl TEXT);
+
+-- 2. Add missing columns (If tables already exist)
+ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS subCategory TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS madeIn TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS supplierId TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS items JSONB;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer JSONB;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS saleDate TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS deliveryDate TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS paymentVoucherUrl TEXT;`;
+                                navigator.clipboard.writeText(sql);
+                                alert('SQL Script copied to clipboard!');
+                              }}
+                            >
+                              Copy SQL
+                            </Button>
+                          </div>
+                          <p className="text-[10px] text-zinc-500 mb-2">
+                            Supabase SQL Editor ထဲမှာ အောက်ပါ Script ကို Run ပေးမှ Sync လုပ်လို့ရပါမယ်။
+                          </p>
+                          <pre className="text-[9px] text-emerald-400 font-mono overflow-x-auto whitespace-pre p-2 bg-black/50 rounded">
+{`CREATE TABLE IF NOT EXISTS products (
+  id TEXT PRIMARY KEY,
+  name TEXT,
+  category TEXT,
+  subCategory TEXT,
+  costPrice NUMERIC,
+  shippingPrice NUMERIC,
+  sellingPrice NUMERIC,
+  stock INTEGER,
+  madeIn TEXT,
+  supplierId TEXT,
+  createdAt TEXT
+);`}
+                          </pre>
+                        </div>
                         {!isSupabaseConfigured() && (
                           <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
                             <p className="text-xs text-red-600 font-medium">Supabase is not configured.</p>
