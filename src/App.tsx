@@ -2,13 +2,6 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import { createClient } from '@supabase/supabase-js'
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
