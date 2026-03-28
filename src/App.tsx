@@ -32,11 +32,11 @@ import { Card, CardHeader, CardTitle, CardContent } from './components/ui/Card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from './components/ui/Dialog';
 import { Login } from './components/Login';
 import { Product, Sale, Expense, DashboardStats, Category, Customer, Supplier, MonthlyReport, JournalEntry, Account } from './types';
-import { cn, generateOrderNumber, generateUUID } from '@/src/lib/utils';
+import { cn, generateOrderNumber, generateUUID } from './lib/utils';
 import { DEFAULT_CATEGORIES, DEFAULT_ACCOUNTS } from './constants';
 import { AccountingModule } from './components/AccountingModule';
 import { AISummary } from './components/AISummary';
-import { supabase, isSupabaseConfigured } from '@/src/lib/supabase';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
 
 type Tab = 'dashboard' | 'inventory' | 'sales' | 'expenses' | 'categories' | 'customers' | 'suppliers' | 'accounting' | 'settings';
 
@@ -99,7 +99,12 @@ export default function App() {
 
 function MainApp() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return sessionStorage.getItem('mmk_auth') === 'true';
+    try {
+      return sessionStorage.getItem('mmk_auth') === 'true';
+    } catch (e) {
+      console.error("Failed to access sessionStorage:", e);
+      return false;
+    }
   });
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -130,39 +135,73 @@ function MainApp() {
 
   // State with LocalStorage Persistence
   const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('mmk_products');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('mmk_products');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Failed to access localStorage for products:", e);
+      return [];
+    }
   });
 
   const [sales, setSales] = useState<Sale[]>(() => {
-    const saved = localStorage.getItem('mmk_sales');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('mmk_sales');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Failed to access localStorage for sales:", e);
+      return [];
+    }
   });
 
   const [expenses, setExpenses] = useState<Expense[]>(() => {
-    const saved = localStorage.getItem('mmk_expenses');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('mmk_expenses');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Failed to access localStorage for expenses:", e);
+      return [];
+    }
   });
 
   const [categories, setCategories] = useState<Category[]>(() => {
-    const saved = localStorage.getItem('mmk_categories');
-    if (saved) return JSON.parse(saved);
+    try {
+      const saved = localStorage.getItem('mmk_categories');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error("Failed to access localStorage for categories:", e);
+    }
     return DEFAULT_CATEGORIES.map(name => ({ id: generateUUID(), name }));
   });
 
   const [customers, setCustomers] = useState<Customer[]>(() => {
-    const saved = localStorage.getItem('mmk_customers');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('mmk_customers');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Failed to access localStorage for customers:", e);
+      return [];
+    }
   });
 
   const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
-    const saved = localStorage.getItem('mmk_suppliers');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('mmk_suppliers');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Failed to access localStorage for suppliers:", e);
+      return [];
+    }
   });
 
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(() => {
-    const saved = localStorage.getItem('mmk_journal_entries');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('mmk_journal_entries');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Failed to access localStorage for journal entries:", e);
+      return [];
+    }
   });
 
   const [accounts] = useState<Account[]>(() => {
@@ -170,8 +209,13 @@ function MainApp() {
   });
 
   const [businessProfile, setBusinessProfile] = useState(() => {
-    const saved = localStorage.getItem('mmk_business_profile');
-    return saved ? JSON.parse(saved) : { name: 'My Shop', address: '', phone: '', googleSheetUrl: '' };
+    try {
+      const saved = localStorage.getItem('mmk_business_profile');
+      return saved ? JSON.parse(saved) : { name: 'My Shop', address: '', phone: '', googleSheetUrl: '' };
+    } catch (e) {
+      console.error("Failed to access localStorage for business profile:", e);
+      return { name: 'My Shop', address: '', phone: '', googleSheetUrl: '' };
+    }
   });
 
   const [isSyncing, setIsSyncing] = useState(false);
@@ -279,35 +323,67 @@ function MainApp() {
 
   // Sync with LocalStorage
   useEffect(() => {
-    localStorage.setItem('mmk_products', JSON.stringify(products));
+    try {
+      localStorage.setItem('mmk_products', JSON.stringify(products));
+    } catch (e) {
+      console.error("Failed to save products to localStorage:", e);
+    }
   }, [products]);
 
   useEffect(() => {
-    localStorage.setItem('mmk_sales', JSON.stringify(sales));
+    try {
+      localStorage.setItem('mmk_sales', JSON.stringify(sales));
+    } catch (e) {
+      console.error("Failed to save sales to localStorage:", e);
+    }
   }, [sales]);
 
   useEffect(() => {
-    localStorage.setItem('mmk_expenses', JSON.stringify(expenses));
+    try {
+      localStorage.setItem('mmk_expenses', JSON.stringify(expenses));
+    } catch (e) {
+      console.error("Failed to save expenses to localStorage:", e);
+    }
   }, [expenses]);
 
   useEffect(() => {
-    localStorage.setItem('mmk_categories', JSON.stringify(categories));
+    try {
+      localStorage.setItem('mmk_categories', JSON.stringify(categories));
+    } catch (e) {
+      console.error("Failed to save categories to localStorage:", e);
+    }
   }, [categories]);
 
   useEffect(() => {
-    localStorage.setItem('mmk_customers', JSON.stringify(customers));
+    try {
+      localStorage.setItem('mmk_customers', JSON.stringify(customers));
+    } catch (e) {
+      console.error("Failed to save customers to localStorage:", e);
+    }
   }, [customers]);
 
   useEffect(() => {
-    localStorage.setItem('mmk_suppliers', JSON.stringify(suppliers));
+    try {
+      localStorage.setItem('mmk_suppliers', JSON.stringify(suppliers));
+    } catch (e) {
+      console.error("Failed to save suppliers to localStorage:", e);
+    }
   }, [suppliers]);
 
   useEffect(() => {
-    localStorage.setItem('mmk_journal_entries', JSON.stringify(journalEntries));
+    try {
+      localStorage.setItem('mmk_journal_entries', JSON.stringify(journalEntries));
+    } catch (e) {
+      console.error("Failed to save journal entries to localStorage:", e);
+    }
   }, [journalEntries]);
 
   useEffect(() => {
-    localStorage.setItem('mmk_business_profile', JSON.stringify(businessProfile));
+    try {
+      localStorage.setItem('mmk_business_profile', JSON.stringify(businessProfile));
+    } catch (e) {
+      console.error("Failed to save business profile to localStorage:", e);
+    }
   }, [businessProfile]);
 
   // Calculate Stats

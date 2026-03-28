@@ -2,9 +2,26 @@ import { GoogleGenAI } from "@google/genai";
 import { Sale } from "../types";
 
 // Initialize the SDK using the environment variable provided by the platform
-const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const getGenAI = () => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.warn("GEMINI_API_KEY is missing. AI features will be disabled.");
+    return null;
+  }
+  try {
+    return new GoogleGenAI({ apiKey });
+  } catch (error) {
+    console.error("Failed to initialize GoogleGenAI:", error);
+    return null;
+  }
+};
+
+const genAI = getGenAI();
 
 export async function getSalesSummary(salesData: Sale[]) {
+  if (!genAI) {
+    return "AI analysis is currently unavailable. Please check your configuration.";
+  }
   // Simplify data for the prompt to avoid token limits
   const simplifiedSales = salesData.map(s => ({
     date: s.date,
