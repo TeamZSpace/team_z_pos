@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { Plus, Search, Package, Trash2, Edit2, Info } from 'lucide-react';
+import { Plus, Search, Package, Trash2, Edit2, Info, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/Table';
 import { Badge } from './ui/Badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from './ui/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from './ui/Dialog';
 import { Label } from './ui/Label';
 import { Select } from './ui/Select';
-import { Product, Category, Supplier } from '../types';
+import { Product, Category, Supplier, Purchase } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 
 interface InventoryManagerProps {
@@ -18,6 +18,7 @@ interface InventoryManagerProps {
   onAddProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   onUpdateProduct: (id: string, product: Partial<Product>) => Promise<void>;
   onDeleteProduct: (id: string) => Promise<void>;
+  onRestock: (purchase: Omit<Purchase, 'id'>) => Promise<void>;
 }
 
 export const InventoryManager = ({
@@ -27,10 +28,14 @@ export const InventoryManager = ({
   onAddProduct,
   onUpdateProduct,
   onDeleteProduct,
+  onRestock,
 }: InventoryManagerProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isRestockDialogOpen, setIsRestockDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [restockProduct, setRestockProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -41,6 +46,13 @@ export const InventoryManager = ({
     stock: '',
     madeIn: '',
     supplierId: '',
+  });
+
+  const [restockData, setRestockData] = useState({
+    quantity: '',
+    costPrice: '',
+    shippingPrice: '',
+    date: new Date().toISOString().split('T')[0],
   });
 
   const filteredProducts = products.filter((p) =>
@@ -71,6 +83,41 @@ export const InventoryManager = ({
     }
 
     handleClose();
+  };
+
+  const handleRestockSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!restockProduct || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const quantity = Number(restockData.quantity);
+      const costPrice = Number(restockData.costPrice);
+      const shippingPrice = Number(restockData.shippingPrice || 0);
+      const totalAmount = (costPrice + shippingPrice) * quantity;
+
+      await onRestock({
+        productId: restockProduct.id,
+        productName: restockProduct.name,
+        quantity,
+        costPrice,
+        shippingPrice,
+        totalAmount,
+        date: restockData.date,
+        supplierId: restockProduct.supplierId,
+      });
+
+      setIsRestockDialogOpen(false);
+      setRestockProduct(null);
+      setRestockData({
+        quantity: '',
+        costPrice: '',
+        shippingPrice: '',
+        date: new Date().toISOString().split('T')[0],
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEdit = (product: Product) => {
@@ -223,6 +270,23 @@ export const InventoryManager = ({
                         </TableCell>
                         <TableCell>
                           <div className="flex justify-center gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              title="Restock / Purchase"
+                              onClick={() => {
+                                setRestockProduct(product);
+                                setRestockData({
+                                  quantity: '',
+                                  costPrice: product.costPrice.toString(),
+                                  shippingPrice: (product.shippingPrice || 0).toString(),
+                                  date: new Date().toISOString().split('T')[0],
+                                });
+                                setIsRestockDialogOpen(true);
+                              }}
+                            >
+                              <RefreshCw className="h-4 w-4 text-blue-500" />
+                            </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
                               <Edit2 className="h-4 w-4" />
                             </Button>
@@ -383,6 +447,88 @@ export const InventoryManager = ({
                 {editingProduct ? 'Update Product' : 'Add Product'}
               </Button>
             </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Restock Dialog */}
+      <Dialog open={isRestockDialogOpen} onOpenChange={setIsRestockDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-blue-500" />
+              Restock Product: {restockProduct?.name}
+            </DialogTitle>
+            <DialogClose onClick={() => setIsRestockDialogOpen(false)} />
+          </DialogHeader>
+          <form onSubmit={handleRestockSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="restock-quantity">Purchase Quantity</Label>
+              <Input
+                id="restock-quantity"
+                type="number"
+                required
+                min="1"
+                placeholder="How many units did you buy?"
+                value={restockData.quantity}
+                onChange={(e) => setRestockData({ ...restockData, quantity: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="restock-cost">Cost Price (MMK)</Label>
+                <Input
+                  id="restock-cost"
+                  type="number"
+                  required
+                  value={restockData.costPrice}
+                  onChange={(e) => setRestockData({ ...restockData, costPrice: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="restock-shipping">Shipping Fees (MMK)</Label>
+                <Input
+                  id="restock-shipping"
+                  type="number"
+                  required
+                  value={restockData.shippingPrice}
+                  onChange={(e) => setRestockData({ ...restockData, shippingPrice: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="restock-date">Purchase Date</Label>
+              <Input
+                id="restock-date"
+                type="date"
+                required
+                value={restockData.date}
+                onChange={(e) => setRestockData({ ...restockData, date: e.target.value })}
+              />
+            </div>
+
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm text-blue-600">Total Purchase Amount:</span>
+                <span className="text-lg font-bold text-blue-700">
+                  {formatCurrency((Number(restockData.costPrice || 0) + Number(restockData.shippingPrice || 0)) * Number(restockData.quantity || 0))}
+                </span>
+              </div>
+              <p className="text-[10px] text-blue-500 italic">
+                * This amount will be recorded as a cash outflow from your sales revenue.
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsRestockDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white">
+                {isSubmitting ? 'Processing...' : 'Confirm Purchase'}
+              </Button>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

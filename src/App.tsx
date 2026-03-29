@@ -18,7 +18,8 @@ import {
   Users,
   UserCheck,
   Settings,
-  Trash2
+  Trash2,
+  RefreshCw
 } from 'lucide-react';
 import { ProfitLossDashboard } from './components/ProfitLossDashboard';
 import { InventoryManager } from './components/InventoryManager';
@@ -27,18 +28,19 @@ import { ExpenseTracker } from './components/ExpenseTracker';
 import { CategoryManager } from './components/CategoryManager';
 import { CustomerManager } from './components/CustomerManager';
 import { SupplierManager } from './components/SupplierManager';
+import { PurchaseManager } from './components/PurchaseManager';
 import { Button } from './components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from './components/ui/Card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from './components/ui/Dialog';
 import { Login } from './components/Login';
-import { Product, Sale, Expense, DashboardStats, Category, Customer, Supplier, MonthlyReport, JournalEntry, Account } from './types';
+import { Product, Sale, Expense, DashboardStats, Category, Customer, Supplier, MonthlyReport, JournalEntry, Account, Purchase } from './types';
 import { cn, generateOrderNumber, generateUUID } from './lib/utils';
 import { DEFAULT_CATEGORIES, DEFAULT_ACCOUNTS } from './constants';
 import { AccountingModule } from './components/AccountingModule';
 import { AISummary } from './components/AISummary';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 
-type Tab = 'dashboard' | 'inventory' | 'sales' | 'expenses' | 'categories' | 'customers' | 'suppliers' | 'accounting' | 'settings';
+type Tab = 'dashboard' | 'inventory' | 'purchases' | 'sales' | 'expenses' | 'categories' | 'customers' | 'suppliers' | 'accounting' | 'settings';
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any }> {
@@ -204,6 +206,16 @@ function MainApp() {
     }
   });
 
+  const [purchases, setPurchases] = useState<Purchase[]>(() => {
+    try {
+      const saved = localStorage.getItem('mmk_purchases');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Failed to access localStorage for purchases:", e);
+      return [];
+    }
+  });
+
   const [accounts] = useState<Account[]>(() => {
     return DEFAULT_ACCOUNTS;
   });
@@ -251,6 +263,8 @@ function MainApp() {
             Categories: categories,
             Customers: customers,
             Suppliers: suppliers,
+            Purchases: purchases,
+            JournalEntries: journalEntries,
             Profile: [businessProfile]
           }
         })
@@ -282,6 +296,7 @@ function MainApp() {
         { name: 'categories', data: categories },
         { name: 'customers', data: customers },
         { name: 'suppliers', data: suppliers },
+        { name: 'purchases', data: purchases },
         { name: 'journal_entries', data: journalEntries },
         { name: 'business_profile', data: [{ ...businessProfile, id: 'default' }] }
       ];
@@ -376,6 +391,54 @@ function MainApp() {
     }
   }, [journalEntries]);
 
+  const hasMigratedRef = React.useRef(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('mmk_purchases', JSON.stringify(purchases));
+    } catch (e) {
+      console.error("Failed to save purchases to localStorage:", e);
+    }
+  }, [purchases]);
+
+  // Migration: Create purchase records for existing products that don't have them
+  useEffect(() => {
+    if (hasMigratedRef.current) return;
+    
+    const productsWithoutPurchases = products.filter(p => p.stock > 0 && !purchases.some(pur => pur.productId === p.id));
+    
+    if (productsWithoutPurchases.length > 0) {
+      hasMigratedRef.current = true;
+      const newPurchases: Purchase[] = productsWithoutPurchases.map(p => ({
+        id: generateUUID(),
+        productId: p.id,
+        productName: p.name,
+        quantity: p.stock,
+        costPrice: p.costPrice,
+        shippingPrice: p.shippingPrice || 0,
+        totalAmount: (p.costPrice + (p.shippingPrice || 0)) * p.stock,
+        date: p.createdAt || new Date().toISOString().split('T')[0],
+        supplierId: p.supplierId,
+      }));
+      
+      setPurchases(prev => [...newPurchases, ...prev]);
+      
+      // Also add journal entries for these initial stocks
+      const newEntries: JournalEntry[] = newPurchases.map(p => ({
+        id: generateUUID(),
+        date: p.date,
+        debit_account_id: 'acc_inventory',
+        credit_account_id: 'acc_cash',
+        amount: p.totalAmount,
+        reference_type: 'Expense',
+        description: `Initial Stock Migration: ${p.productName}`,
+        reference_id: p.id,
+      }));
+      
+      setJournalEntries(prev => [...newEntries, ...prev]);
+    }
+  }, [products, purchases]);
+
   useEffect(() => {
     try {
       localStorage.setItem('mmk_business_profile', JSON.stringify(businessProfile));
@@ -394,16 +457,19 @@ function MainApp() {
       ? expenses
       : expenses.filter(e => e.date.startsWith(selectedMonth));
 
+    const filteredPurchases = selectedMonth === 'all'
+      ? purchases
+      : purchases.filter(p => p.date.startsWith(selectedMonth));
+
     const totalRevenue = filteredSales.reduce((acc, s) => acc + s.totalRevenue, 0);
     const totalCOGS = filteredSales.reduce((acc, s) => acc + s.totalCost, 0);
     const totalExpenses = filteredExpenses.reduce((acc, e) => acc + e.amount, 0);
     
-    const filteredProducts = selectedMonth === 'all'
-      ? products
-      : products.filter(p => p.createdAt.startsWith(selectedMonth));
-    const totalPurchase = filteredProducts.reduce((acc, p) => acc + ((p.costPrice + (p.shippingPrice || 0)) * p.stock), 0);
+    // Total Purchase is now solely based on the purchases records to avoid double counting
+    const totalPurchase = filteredPurchases.reduce((acc, p) => acc + p.totalAmount, 0);
 
     const netProfit = totalRevenue - (totalCOGS + totalExpenses);
+    const netCash = totalRevenue - (totalPurchase + totalExpenses);
 
     return {
       totalRevenue,
@@ -411,8 +477,9 @@ function MainApp() {
       totalExpenses,
       totalPurchase,
       netProfit,
+      netCash,
     };
-  }, [sales, expenses, products, selectedMonth]);
+  }, [sales, expenses, purchases, products, selectedMonth]);
 
   const monthlyReports = useMemo<MonthlyReport[]>(() => {
     const reports: Record<string, MonthlyReport> = {};
@@ -420,7 +487,7 @@ function MainApp() {
     sales.forEach(s => {
       const month = s.date.substring(0, 7); // YYYY-MM
       if (!reports[month]) {
-        reports[month] = { month, totalRevenue: 0, totalExpenses: 0, totalCOGS: 0, totalPurchase: 0, netProfit: 0 };
+        reports[month] = { month, totalRevenue: 0, totalExpenses: 0, totalCOGS: 0, totalPurchase: 0, netProfit: 0, netCash: 0 };
       }
       reports[month].totalRevenue += s.totalRevenue;
       reports[month].totalCOGS += s.totalCost;
@@ -429,31 +496,65 @@ function MainApp() {
     expenses.forEach(e => {
       const month = e.date.substring(0, 7); // YYYY-MM
       if (!reports[month]) {
-        reports[month] = { month, totalRevenue: 0, totalExpenses: 0, totalCOGS: 0, totalPurchase: 0, netProfit: 0 };
+        reports[month] = { month, totalRevenue: 0, totalExpenses: 0, totalCOGS: 0, totalPurchase: 0, netProfit: 0, netCash: 0 };
       }
       reports[month].totalExpenses += e.amount;
     });
 
-    products.forEach(p => {
-      const month = p.createdAt.substring(0, 7); // YYYY-MM
+    purchases.forEach(p => {
+      const month = p.date.substring(0, 7); // YYYY-MM
       if (!reports[month]) {
-        reports[month] = { month, totalRevenue: 0, totalExpenses: 0, totalCOGS: 0, totalPurchase: 0, netProfit: 0 };
+        reports[month] = { month, totalRevenue: 0, totalExpenses: 0, totalCOGS: 0, totalPurchase: 0, netProfit: 0, netCash: 0 };
       }
-      reports[month].totalPurchase += ((p.costPrice + (p.shippingPrice || 0)) * p.stock);
+      reports[month].totalPurchase += p.totalAmount;
     });
     
     return Object.values(reports)
-      .map(r => ({ ...r, netProfit: r.totalRevenue - (r.totalCOGS + r.totalExpenses) }))
+      .map(r => ({ 
+        ...r, 
+        netProfit: r.totalRevenue - (r.totalCOGS + r.totalExpenses),
+        netCash: r.totalRevenue - (r.totalPurchase + r.totalExpenses)
+      }))
       .sort((a, b) => b.month.localeCompare(a.month));
-  }, [sales, expenses, products]);
+  }, [sales, expenses, purchases, products]);
 
   // Handlers
   const handleAddProduct = async (productData: Omit<Product, 'id'>) => {
+    const productId = generateUUID();
     const newProduct: Product = {
       ...productData,
-      id: generateUUID(),
+      id: productId,
     };
     setProducts([...products, newProduct]);
+
+    // If there's initial stock, record it as a purchase
+    if (productData.stock > 0) {
+      const newPurchase: Purchase = {
+        id: generateUUID(),
+        productId: productId,
+        productName: productData.name,
+        quantity: productData.stock,
+        costPrice: productData.costPrice,
+        shippingPrice: productData.shippingPrice || 0,
+        totalAmount: (productData.costPrice + (productData.shippingPrice || 0)) * productData.stock,
+        date: productData.createdAt || new Date().toISOString().split('T')[0],
+        supplierId: productData.supplierId,
+      };
+      setPurchases(prev => [newPurchase, ...prev]);
+
+      // Add journal entry for initial stock
+      const entry: JournalEntry = {
+        id: generateUUID(),
+        date: newPurchase.date,
+        debit_account_id: 'acc_inventory',
+        credit_account_id: 'acc_cash',
+        amount: newPurchase.totalAmount,
+        reference_type: 'Expense',
+        description: `Initial Stock: ${newPurchase.productName}`,
+        reference_id: newPurchase.id,
+      };
+      setJournalEntries(prev => [entry, ...prev]);
+    }
   };
 
   const handleUpdateProduct = async (id: string, productData: Partial<Product>) => {
@@ -468,15 +569,78 @@ function MainApp() {
     );
   };
 
+  const handleRestock = async (purchaseData: Omit<Purchase, 'id'>) => {
+    const newPurchase: Purchase = {
+      ...purchaseData,
+      id: generateUUID(),
+    };
+    
+    setPurchases(prev => [newPurchase, ...prev]);
+    
+    // Update product stock
+    setProducts(prevProducts => 
+      prevProducts.map(p => 
+        p.id === purchaseData.productId 
+          ? { ...p, stock: p.stock + purchaseData.quantity } 
+          : p
+      )
+    );
+
+    // Add journal entry
+    const entry: JournalEntry = {
+      id: generateUUID(),
+      date: purchaseData.date,
+      debit_account_id: 'acc_inventory',
+      credit_account_id: 'acc_cash',
+      amount: purchaseData.totalAmount,
+      reference_type: 'Expense',
+      description: `Restock: ${purchaseData.productName} (${purchaseData.quantity} units)`,
+      reference_id: newPurchase.id,
+    };
+    setJournalEntries(prev => [entry, ...prev]);
+  };
+
+  const handleDeletePurchase = async (id: string) => {
+    const purchaseToDelete = purchases.find(p => p.id === id);
+    if (!purchaseToDelete) return;
+
+    showConfirm(
+      'Delete Purchase Record',
+      'Are you sure you want to delete this purchase record? This will automatically revert inventory stock.',
+      () => {
+        // Revert stock
+        setProducts(prevProducts => 
+          prevProducts.map(p => 
+            p.id === purchaseToDelete.productId 
+              ? { ...p, stock: Math.max(0, p.stock - purchaseToDelete.quantity) } 
+              : p
+          )
+        );
+
+        // Delete journal entry
+        setJournalEntries(prev => prev.filter(e => e.reference_id !== id));
+        
+        // Delete purchase
+        setPurchases(prev => prev.filter(p => p.id !== id));
+      }
+    );
+  };
+
   const handleAddSale = async (saleData: Omit<Sale, 'id' | 'orderNumber'>) => {
-    // Get today's order count for order number generation
-    const today = new Date().toLocaleDateString();
-    const todayOrders = sales.filter(s => new Date(s.date).toLocaleDateString() === today);
+    // Use the selected sale date for order number generation
+    const saleDateObj = saleData.saleDate ? new Date(saleData.saleDate) : new Date(saleData.date);
+    
+    // Count existing orders for this specific month
+    const sameMonthOrders = sales.filter(s => {
+      const sDate = s.saleDate ? new Date(s.saleDate) : new Date(s.date);
+      return sDate.getFullYear() === saleDateObj.getFullYear() &&
+             sDate.getMonth() === saleDateObj.getMonth();
+    });
     
     const newSale: Sale = {
       ...saleData,
       id: generateUUID(),
-      orderNumber: generateOrderNumber(todayOrders.length),
+      orderNumber: generateOrderNumber(saleDateObj, sameMonthOrders.length),
     };
     
     // Update stock for each item
@@ -683,6 +847,7 @@ function MainApp() {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'inventory', label: 'Inventory', icon: Package },
+    { id: 'purchases', label: 'Purchases', icon: RefreshCw },
     { id: 'sales', label: 'Sales', icon: ShoppingCart },
     { id: 'expenses', label: 'Expenses', icon: CreditCard },
     { id: 'categories', label: 'Categories', icon: Tags },
@@ -796,6 +961,7 @@ function MainApp() {
                 onAddProduct={handleAddProduct}
                 onUpdateProduct={handleUpdateProduct}
                 onDeleteProduct={handleDeleteProduct}
+                onRestock={handleRestock}
               />
             )}
             {activeTab === 'sales' && (
@@ -837,6 +1003,15 @@ function MainApp() {
                 onAddSupplier={handleAddSupplier}
                 onUpdateSupplier={handleUpdateSupplier}
                 onDeleteSupplier={handleDeleteSupplier}
+              />
+            )}
+            {activeTab === 'purchases' && (
+              <PurchaseManager 
+                purchases={purchases}
+                products={products}
+                suppliers={suppliers}
+                onAddPurchase={handleRestock}
+                onDeletePurchase={handleDeletePurchase}
               />
             )}
             {activeTab === 'accounting' && (
@@ -970,6 +1145,7 @@ CREATE TABLE IF NOT EXISTS expenses (id TEXT PRIMARY KEY, type TEXT, amount NUME
 CREATE TABLE IF NOT EXISTS categories (id TEXT PRIMARY KEY, name TEXT, parentId TEXT);
 CREATE TABLE IF NOT EXISTS customers (id TEXT PRIMARY KEY, facebookName TEXT, orderName TEXT, phone TEXT, address TEXT);
 CREATE TABLE IF NOT EXISTS suppliers (id TEXT PRIMARY KEY, name TEXT, phone TEXT);
+CREATE TABLE IF NOT EXISTS purchases (id TEXT PRIMARY KEY, productId TEXT, productName TEXT, quantity INTEGER, costPrice NUMERIC, shippingPrice NUMERIC, totalAmount NUMERIC, date TEXT, supplierId TEXT);
 CREATE TABLE IF NOT EXISTS journal_entries (id TEXT PRIMARY KEY, date TEXT, debit_account_id TEXT, credit_account_id TEXT, amount NUMERIC, reference_type TEXT, description TEXT, reference_id TEXT, contact_id TEXT);
 CREATE TABLE IF NOT EXISTS business_profile (id TEXT PRIMARY KEY, name TEXT, address TEXT, phone TEXT, googleSheetUrl TEXT);
 

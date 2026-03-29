@@ -6,8 +6,9 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Label } from './ui/Label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/Table';
+import { Badge } from './ui/Badge';
 import { Product, Sale, SaleItem } from '../types';
-import { formatCurrency, cn, convertMyanmarToEnglish } from '../lib/utils';
+import { formatCurrency, cn, convertMyanmarToEnglish, generateOrderNumber } from '../lib/utils';
 import { PAYMENT_METHODS } from '../constants';
 
 interface SalesEntryProps {
@@ -137,16 +138,31 @@ export const SalesEntry = ({ products, onAddSale, onUpdateSale, onDeleteSale, sa
     );
   });
 
+  const nextOrderNumber = generateOrderNumber(
+    customerInfo.saleDate || new Date(),
+    sales.filter(s => {
+      const sDate = s.saleDate ? new Date(s.saleDate) : new Date(s.date);
+      const targetDate = new Date(customerInfo.saleDate || new Date());
+      return sDate.getFullYear() === targetDate.getFullYear() &&
+             sDate.getMonth() === targetDate.getMonth();
+    }).length
+  );
+
   return (
     <div className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Customer Information */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
               Customer Information
             </CardTitle>
+            {!editingSaleId && (
+              <Badge variant="outline" className="font-mono text-xs">
+                Next Order: {nextOrderNumber}
+              </Badge>
+            )}
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">

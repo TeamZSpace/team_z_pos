@@ -103,12 +103,25 @@ export interface Expense {
   voucherUrl?: string; // Base64 or URL
 }
 
+export interface Purchase {
+  id: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  costPrice: number;
+  shippingPrice: number;
+  totalAmount: number;
+  date: string;
+  supplierId?: string;
+}
+
 export interface DashboardStats {
   totalRevenue: number;
   totalCOGS: number;
   totalExpenses: number;
   totalPurchase: number;
   netProfit: number;
+  netCash: number;
 }
 
 export interface MonthlyReport {
@@ -118,4 +131,5 @@ export interface MonthlyReport {
   totalCOGS: number;
   totalPurchase: number;
   netProfit: number;
+  netCash: number;
 }

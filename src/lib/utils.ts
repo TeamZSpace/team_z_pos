@@ -14,13 +14,12 @@ export function formatCurrency(amount: number) {
   }).format(amount);
 }
 
-export function generateOrderNumber(todayOrderCount: number) {
-  const now = new Date();
-  const day = String(now.getDate()).padStart(2, '0');
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const year = now.getFullYear();
-  const count = String(todayOrderCount + 1).padStart(3, '0');
-  return `${day}${month}${year}${count}`;
+export function generateOrderNumber(date: Date | string, monthlyOrderCount: number) {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = String(d.getFullYear()).slice(-2);
+  const count = String(monthlyOrderCount + 1).padStart(4, '0');
+  return `${month}${year}${count}`;
 }
 
 export function convertMyanmarToEnglish(input: string): string {
