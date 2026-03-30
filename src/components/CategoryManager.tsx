@@ -30,7 +30,11 @@ export function CategoryManager({
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCategoryName.trim()) return;
+    console.log('CategoryManager: handleAdd triggered', { newCategoryName, selectedParentId });
+    if (!newCategoryName.trim()) {
+      console.warn('CategoryManager: Category name is empty');
+      return;
+    }
     onAddCategory(newCategoryName.trim(), selectedParentId || undefined);
     setNewCategoryName('');
     setSelectedParentId('');

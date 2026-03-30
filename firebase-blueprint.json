@@ -2,7 +2,7 @@
   "entities": {
     "Supplier": {
       "title": "Supplier",
-      "description": "Supplier information",
+      "description": "A supplier of products",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -13,7 +13,7 @@
     },
     "Category": {
       "title": "Category",
-      "description": "Product category",
+      "description": "A product category",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -24,7 +24,7 @@
     },
     "Product": {
       "title": "Product",
-      "description": "Product information",
+      "description": "An inventory item",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -41,9 +41,22 @@
       },
       "required": ["id", "name", "category", "costPrice", "sellingPrice", "stock", "createdAt"]
     },
+    "Customer": {
+      "title": "Customer",
+      "description": "A customer who has made a purchase",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "facebookName": { "type": "string" },
+        "orderName": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" }
+      },
+      "required": ["id", "phone"]
+    },
     "Sale": {
       "title": "Sale",
-      "description": "Sale transaction",
+      "description": "A sales transaction",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -61,7 +74,7 @@
     },
     "Expense": {
       "title": "Expense",
-      "description": "Expense entry",
+      "description": "A business expense",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -71,41 +84,11 @@
         "date": { "type": "string" },
         "voucherUrl": { "type": "string" }
       },
-      "required": ["id", "type", "amount", "description", "date"]
-    },
-    "Purchase": {
-      "title": "Purchase",
-      "description": "Purchase transaction",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "productId": { "type": "string" },
-        "productName": { "type": "string" },
-        "quantity": { "type": "number" },
-        "costPrice": { "type": "number" },
-        "shippingPrice": { "type": "number" },
-        "totalAmount": { "type": "number" },
-        "date": { "type": "string" },
-        "supplierId": { "type": "string" }
-      },
-      "required": ["id", "productId", "productName", "quantity", "costPrice", "totalAmount", "date"]
-    },
-    "Customer": {
-      "title": "Customer",
-      "description": "Customer information",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "facebookName": { "type": "string" },
-        "orderName": { "type": "string" },
-        "phone": { "type": "string" },
-        "address": { "type": "string" }
-      },
-      "required": ["id", "facebookName", "orderName", "phone", "address"]
+      "required": ["id", "type", "amount", "date"]
     },
     "JournalEntry": {
-      "title": "JournalEntry",
-      "description": "Accounting journal entry",
+      "title": "Journal Entry",
+      "description": "An accounting journal entry",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -120,9 +103,26 @@
       },
       "required": ["id", "date", "debit_account_id", "credit_account_id", "amount", "reference_type", "description"]
     },
+    "Purchase": {
+      "title": "Purchase",
+      "description": "A purchase of inventory",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "quantity": { "type": "number" },
+        "costPrice": { "type": "number" },
+        "shippingPrice": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "date": { "type": "string" },
+        "supplierId": { "type": "string" }
+      },
+      "required": ["id", "productId", "productName", "quantity", "costPrice", "totalAmount", "date"]
+    },
     "BusinessProfile": {
-      "title": "BusinessProfile",
-      "description": "Business profile information",
+      "title": "Business Profile",
+      "description": "Information about the business",
       "type": "object",
       "properties": {
         "name": { "type": "string" },
@@ -134,41 +134,14 @@
     }
   },
   "firestore": {
-    "/users/{userId}/suppliers/{id}": {
-      "schema": "Supplier",
-      "description": "User's suppliers"
-    },
-    "/users/{userId}/categories/{id}": {
-      "schema": "Category",
-      "description": "User's categories"
-    },
-    "/users/{userId}/products/{id}": {
-      "schema": "Product",
-      "description": "User's products"
-    },
-    "/users/{userId}/sales/{id}": {
-      "schema": "Sale",
-      "description": "User's sales"
-    },
-    "/users/{userId}/expenses/{id}": {
-      "schema": "Expense",
-      "description": "User's expenses"
-    },
-    "/users/{userId}/purchases/{id}": {
-      "schema": "Purchase",
-      "description": "User's purchases"
-    },
-    "/users/{userId}/customers/{id}": {
-      "schema": "Customer",
-      "description": "User's customers"
-    },
-    "/users/{userId}/journalEntries/{id}": {
-      "schema": "JournalEntry",
-      "description": "User's journal entries"
-    },
-    "/users/{userId}/profile/data": {
-      "schema": "BusinessProfile",
-      "description": "User's business profile"
-    }
+    "/users/{businessId}/suppliers/{supplierId}": { "schema": "Supplier", "description": "Suppliers for a business" },
+    "/users/{businessId}/categories/{categoryId}": { "schema": "Category", "description": "Categories for a business" },
+    "/users/{businessId}/products/{productId}": { "schema": "Product", "description": "Products for a business" },
+    "/users/{businessId}/customers/{customerId}": { "schema": "Customer", "description": "Customers for a business" },
+    "/users/{businessId}/sales/{saleId}": { "schema": "Sale", "description": "Sales for a business" },
+    "/users/{businessId}/expenses/{expenseId}": { "schema": "Expense", "description": "Expenses for a business" },
+    "/users/{businessId}/journalEntries/{entryId}": { "schema": "JournalEntry", "description": "Journal entries for a business" },
+    "/users/{businessId}/purchases/{purchaseId}": { "schema": "Purchase", "description": "Purchases for a business" },
+    "/users/{businessId}/profile/data": { "schema": "BusinessProfile", "description": "Profile data for a business" }
   }
 }

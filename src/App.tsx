@@ -115,7 +115,11 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
     path
   }
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  
+  // Don't throw for LIST operations to prevent background sync from crashing the app
+  if (operationType !== OperationType.LIST) {
+    throw new Error(JSON.stringify(errInfo));
+  }
 }
 
 type Tab = 'dashboard' | 'inventory' | 'purchases' | 'sales' | 'expenses' | 'categories' | 'customers' | 'suppliers' | 'accounting' | 'settings';
@@ -262,7 +266,17 @@ function MainApp() {
     const unsubSales = syncCollection('sales', setSales);
     const unsubExpenses = syncCollection('expenses', setExpenses);
     const unsubCategories = syncCollection('categories', (data: any[]) => {
-      setCategories(data.length > 0 ? data as Category[] : DEFAULT_CATEGORIES.map(name => ({ id: generateUUID(), name })));
+      const customCategories = data as Category[];
+      
+      // Always include default categories unless they are overridden by custom ones with the same name
+      const defaultCategories = DEFAULT_CATEGORIES
+        .filter(name => !customCategories.some(c => c.name.toLowerCase() === name.toLowerCase() && !c.parentId))
+        .map((name, index) => ({ 
+          id: `default_${index}`, 
+          name 
+        }));
+      
+      setCategories([...defaultCategories, ...customCategories]);
     }, 'name');
     const unsubCustomers = syncCollection('customers', setCustomers, 'orderName');
     const unsubSuppliers = syncCollection('suppliers', setSuppliers, 'name');
@@ -667,9 +681,13 @@ function MainApp() {
     if (!user) return;
     const id = generateUUID();
     try {
+      console.log('Adding category:', { id, name, parentId });
       await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'categories', id), { id, name, parentId });
+      alert('Category added successfully! အမျိုးအစားအသစ်ကို အောင်မြင်စွာ ထည့်သွင်းပြီးပါပြီ။');
     } catch (error) {
+      console.error('Error adding category:', error);
       handleFirestoreError(error, OperationType.WRITE, `users/${SHARED_BUSINESS_ID}/categories/${id}`);
+      alert('Error adding category. Please try again.');
     }
   };
 
@@ -677,8 +695,10 @@ function MainApp() {
     if (!user) return;
     try {
       await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'categories', id), { name }, { merge: true });
+      alert('Category updated successfully!');
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `users/${SHARED_BUSINESS_ID}/categories/${id}`);
+      alert('Error updating category.');
     }
   };
 

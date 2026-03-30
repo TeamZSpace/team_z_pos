@@ -22,7 +22,12 @@ export function Login({ }: LoginProps) {
       console.error("Google Sign-In Error:", err);
       if (err.code === 'auth/unauthorized-domain') {
         const domain = window.location.hostname;
-        setError(`Firebase Error: Unauthorized Domain (${domain}). Please add this domain to your Firebase Console under Authentication > Settings > Authorized domains.`);
+        setError(
+          `Google Sign-In Error: Unauthorized Domain (${domain}). 
+          To fix this, please go to your Firebase Console: 
+          https://console.firebase.google.com/project/teamzspacebackup/authentication/settings 
+          and add "${domain}" to the "Authorized domains" list.`
+        );
       } else {
         setError(err.message || 'Failed to sign in with Google.');
       }
