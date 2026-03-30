@@ -1,106 +1,174 @@
 {
   "entities": {
-    "Product": {
-      "title": "Product",
-      "description": "A product in the inventory.",
+    "Supplier": {
+      "title": "Supplier",
+      "description": "Supplier information",
       "type": "object",
       "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the product."
-        },
-        "costPrice": {
-          "type": "number",
-          "description": "The cost price of the product."
-        },
-        "sellingPrice": {
-          "type": "number",
-          "description": "The selling price of the product."
-        },
-        "stock": {
-          "type": "number",
-          "description": "The current stock of the product."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The date and time the product was created."
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" }
       },
-      "required": ["name", "costPrice", "sellingPrice", "stock"]
+      "required": ["id", "name", "phone"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Product category",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "parentId": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Product information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "subCategory": { "type": "string" },
+        "costPrice": { "type": "number" },
+        "shippingPrice": { "type": "number" },
+        "sellingPrice": { "type": "number" },
+        "stock": { "type": "number" },
+        "madeIn": { "type": "string" },
+        "supplierId": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "category", "costPrice", "sellingPrice", "stock", "createdAt"]
     },
     "Sale": {
       "title": "Sale",
-      "description": "A sale transaction.",
+      "description": "Sale transaction",
       "type": "object",
       "properties": {
-        "productId": {
-          "type": "string",
-          "description": "The ID of the product sold."
-        },
-        "productName": {
-          "type": "string",
-          "description": "The name of the product sold."
-        },
-        "quantity": {
-          "type": "number",
-          "description": "The quantity of the product sold."
-        },
-        "totalRevenue": {
-          "type": "number",
-          "description": "The total revenue from the sale."
-        },
-        "totalCost": {
-          "type": "number",
-          "description": "The total cost of the items sold (COGS)."
-        },
-        "date": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The date and time of the sale."
-        }
+        "id": { "type": "string" },
+        "orderNumber": { "type": "string" },
+        "items": { "type": "array" },
+        "customer": { "type": "object" },
+        "totalRevenue": { "type": "number" },
+        "totalCost": { "type": "number" },
+        "date": { "type": "string" },
+        "saleDate": { "type": "string" },
+        "deliveryDate": { "type": "string" },
+        "paymentVoucherUrl": { "type": "string" }
       },
-      "required": ["productId", "quantity", "totalRevenue", "totalCost", "date"]
+      "required": ["id", "orderNumber", "items", "customer", "totalRevenue", "totalCost", "date"]
     },
     "Expense": {
       "title": "Expense",
-      "description": "A business expense.",
+      "description": "Expense entry",
       "type": "object",
       "properties": {
-        "type": {
-          "type": "string",
-          "enum": ["Marketing", "Delivery", "Other"],
-          "description": "The type of expense."
-        },
-        "amount": {
-          "type": "number",
-          "description": "The amount of the expense."
-        },
-        "description": {
-          "type": "string",
-          "description": "A description of the expense."
-        },
-        "date": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The date and time of the expense."
-        }
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "amount": { "type": "number" },
+        "description": { "type": "string" },
+        "date": { "type": "string" },
+        "voucherUrl": { "type": "string" }
       },
-      "required": ["type", "amount", "date"]
+      "required": ["id", "type", "amount", "description", "date"]
+    },
+    "Purchase": {
+      "title": "Purchase",
+      "description": "Purchase transaction",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "quantity": { "type": "number" },
+        "costPrice": { "type": "number" },
+        "shippingPrice": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "date": { "type": "string" },
+        "supplierId": { "type": "string" }
+      },
+      "required": ["id", "productId", "productName", "quantity", "costPrice", "totalAmount", "date"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Customer information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "facebookName": { "type": "string" },
+        "orderName": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" }
+      },
+      "required": ["id", "facebookName", "orderName", "phone", "address"]
+    },
+    "JournalEntry": {
+      "title": "JournalEntry",
+      "description": "Accounting journal entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "debit_account_id": { "type": "string" },
+        "credit_account_id": { "type": "string" },
+        "amount": { "type": "number" },
+        "reference_type": { "type": "string" },
+        "description": { "type": "string" },
+        "reference_id": { "type": "string" },
+        "contact_id": { "type": "string" }
+      },
+      "required": ["id", "date", "debit_account_id", "credit_account_id", "amount", "reference_type", "description"]
+    },
+    "BusinessProfile": {
+      "title": "BusinessProfile",
+      "description": "Business profile information",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "googleSheetUrl": { "type": "string" }
+      },
+      "required": ["name"]
     }
   },
   "firestore": {
-    "/products": {
+    "/users/{userId}/suppliers/{id}": {
+      "schema": "Supplier",
+      "description": "User's suppliers"
+    },
+    "/users/{userId}/categories/{id}": {
+      "schema": "Category",
+      "description": "User's categories"
+    },
+    "/users/{userId}/products/{id}": {
       "schema": "Product",
-      "description": "Collection of products."
+      "description": "User's products"
     },
-    "/sales": {
+    "/users/{userId}/sales/{id}": {
       "schema": "Sale",
-      "description": "Collection of sales transactions."
+      "description": "User's sales"
     },
-    "/expenses": {
+    "/users/{userId}/expenses/{id}": {
       "schema": "Expense",
-      "description": "Collection of business expenses."
+      "description": "User's expenses"
+    },
+    "/users/{userId}/purchases/{id}": {
+      "schema": "Purchase",
+      "description": "User's purchases"
+    },
+    "/users/{userId}/customers/{id}": {
+      "schema": "Customer",
+      "description": "User's customers"
+    },
+    "/users/{userId}/journalEntries/{id}": {
+      "schema": "JournalEntry",
+      "description": "User's journal entries"
+    },
+    "/users/{userId}/profile/data": {
+      "schema": "BusinessProfile",
+      "description": "User's business profile"
     }
   }
 }

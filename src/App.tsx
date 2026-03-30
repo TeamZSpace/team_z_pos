@@ -19,7 +19,10 @@ import {
   UserCheck,
   Settings,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  LogOut,
+  Cloud,
+  CloudOff
 } from 'lucide-react';
 import { ProfitLossDashboard } from './components/ProfitLossDashboard';
 import { InventoryManager } from './components/InventoryManager';
@@ -33,63 +36,89 @@ import { Button } from './components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from './components/ui/Card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from './components/ui/Dialog';
 import { Login } from './components/Login';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Product, Sale, Expense, DashboardStats, Category, Customer, Supplier, MonthlyReport, JournalEntry, Account, Purchase } from './types';
 import { cn, generateOrderNumber, generateUUID } from './lib/utils';
 import { DEFAULT_CATEGORIES, DEFAULT_ACCOUNTS } from './constants';
 import { AccountingModule } from './components/AccountingModule';
 import { AISummary } from './components/AISummary';
-import { supabase, isSupabaseConfigured } from './lib/supabase';
+import { 
+  auth, 
+  db, 
+  logout, 
+  onAuthStateChanged, 
+  User 
+} from './firebase';
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  deleteDoc, 
+  onSnapshot, 
+  query, 
+  orderBy,
+  Timestamp
+} from 'firebase/firestore';
 
-type Tab = 'dashboard' | 'inventory' | 'purchases' | 'sales' | 'expenses' | 'categories' | 'customers' | 'suppliers' | 'accounting' | 'settings';
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
 
-// Error Boundary Component
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any }> {
-  constructor(props: any) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error: any) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: any, errorInfo: any) {
-    console.error("ErrorBoundary caught an error", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-zinc-50 p-4">
-          <Card className="max-w-md w-full">
-            <CardHeader>
-              <CardTitle className="text-red-600 flex items-center gap-2">
-                <X className="h-5 w-5" />
-                Something went wrong
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-zinc-600">
-                The application encountered an error. This might be due to incorrect configuration or a temporary issue.
-              </p>
-              <div className="bg-zinc-100 p-3 rounded text-xs font-mono overflow-auto max-h-40">
-                {this.state.error?.toString()}
-              </div>
-              <Button 
-                className="w-full" 
-                onClick={() => window.location.reload()}
-              >
-                Reload Application
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
-
-    return this.props.children;
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
   }
 }
+
+const AUTHORIZED_EMAILS = [
+  "diginestt2026@gmail.com",
+  "myatbinance@gmail.com"
+];
+
+const SHARED_BUSINESS_ID = 'shared_business_001';
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+type Tab = 'dashboard' | 'inventory' | 'purchases' | 'sales' | 'expenses' | 'categories' | 'customers' | 'suppliers' | 'accounting' | 'settings';
 
 export default function App() {
   return (
@@ -100,16 +129,11 @@ export default function App() {
 }
 
 function MainApp() {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    try {
-      return sessionStorage.getItem('mmk_auth') === 'true';
-    } catch (e) {
-      console.error("Failed to access sessionStorage:", e);
-      return false;
-    }
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
   
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
@@ -135,107 +159,23 @@ function MainApp() {
     });
   };
 
-  // State with LocalStorage Persistence
-  const [products, setProducts] = useState<Product[]>(() => {
-    try {
-      const saved = localStorage.getItem('mmk_products');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error("Failed to access localStorage for products:", e);
-      return [];
-    }
-  });
-
-  const [sales, setSales] = useState<Sale[]>(() => {
-    try {
-      const saved = localStorage.getItem('mmk_sales');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error("Failed to access localStorage for sales:", e);
-      return [];
-    }
-  });
-
-  const [expenses, setExpenses] = useState<Expense[]>(() => {
-    try {
-      const saved = localStorage.getItem('mmk_expenses');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error("Failed to access localStorage for expenses:", e);
-      return [];
-    }
-  });
-
-  const [categories, setCategories] = useState<Category[]>(() => {
-    try {
-      const saved = localStorage.getItem('mmk_categories');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error("Failed to access localStorage for categories:", e);
-    }
-    return DEFAULT_CATEGORIES.map(name => ({ id: generateUUID(), name }));
-  });
-
-  const [customers, setCustomers] = useState<Customer[]>(() => {
-    try {
-      const saved = localStorage.getItem('mmk_customers');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error("Failed to access localStorage for customers:", e);
-      return [];
-    }
-  });
-
-  const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
-    try {
-      const saved = localStorage.getItem('mmk_suppliers');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error("Failed to access localStorage for suppliers:", e);
-      return [];
-    }
-  });
-
-  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(() => {
-    try {
-      const saved = localStorage.getItem('mmk_journal_entries');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error("Failed to access localStorage for journal entries:", e);
-      return [];
-    }
-  });
-
-  const [purchases, setPurchases] = useState<Purchase[]>(() => {
-    try {
-      const saved = localStorage.getItem('mmk_purchases');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error("Failed to access localStorage for purchases:", e);
-      return [];
-    }
-  });
-
-  const [accounts] = useState<Account[]>(() => {
-    return DEFAULT_ACCOUNTS;
-  });
-
-  const [businessProfile, setBusinessProfile] = useState(() => {
-    try {
-      const saved = localStorage.getItem('mmk_business_profile');
-      return saved ? JSON.parse(saved) : { name: 'My Shop', address: '', phone: '', googleSheetUrl: '' };
-    } catch (e) {
-      console.error("Failed to access localStorage for business profile:", e);
-      return { name: 'My Shop', address: '', phone: '', googleSheetUrl: '' };
-    }
-  });
-
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isSupabaseSyncing, setIsSupabaseSyncing] = useState(false);
+  // State with Firebase Sync
+  const [products, setProducts] = useState<Product[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [accounts] = useState<Account[]>(DEFAULT_ACCOUNTS);
+  const [businessProfile, setBusinessProfile] = useState({ name: 'My Shop', address: '', phone: '', googleSheetUrl: '' });
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const syncToGoogleSheets = async () => {
     if (!businessProfile.googleSheetUrl) {
@@ -281,171 +221,89 @@ function MainApp() {
     }
   };
 
-  const syncToSupabase = async () => {
-    if (!supabase) {
-      alert('Please set your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the environment first.');
-      return;
-    }
-
-    setIsSupabaseSyncing(true);
+  const handleSaveBusinessProfile = async () => {
+    if (!user) return;
     try {
-      const tables = [
-        { name: 'products', data: products },
-        { name: 'sales', data: sales },
-        { name: 'expenses', data: expenses },
-        { name: 'categories', data: categories },
-        { name: 'customers', data: customers },
-        { name: 'suppliers', data: suppliers },
-        { name: 'purchases', data: purchases },
-        { name: 'journal_entries', data: journalEntries },
-        { name: 'business_profile', data: [{ ...businessProfile, id: 'default' }] }
-      ];
-
-      for (const table of tables) {
-        if (table.data.length === 0) continue;
-        
-        const { error } = await supabase
-          .from(table.name)
-          .upsert(table.data, { onConflict: 'id' });
-        
-        if (error) throw error;
-      }
-
-      alert('Data successfully synced to Supabase! Supabase ထဲကို ဒေတာများ အောင်မြင်စွာ ထည့်သွင်းပြီးပါပြီ။');
+      await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'profile', 'data'), businessProfile);
+      alert('Business profile saved successfully! လုပ်ငန်းအချက်အလက်များကို အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ။');
     } catch (error) {
-      console.error('Supabase sync error:', error);
-      alert('Supabase sync failed. Please check your table permissions and internet connection. Error: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    } finally {
-      setIsSupabaseSyncing(false);
+      handleFirestoreError(error, OperationType.WRITE, `users/${SHARED_BUSINESS_ID}/profile/data`);
     }
   };
 
-  const handleLogin = (username: string, password: string) => {
-    if (username === 'admin' && password === 'admin2323') {
-      setIsAuthenticated(true);
-      sessionStorage.setItem('mmk_auth', 'true');
-      return true;
-    }
-    return false;
-  };
+  // Auth Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setIsAuthReady(true);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Firebase Real-time Sync
+  useEffect(() => {
+    if (!user) return;
+
+    setIsCloudSyncing(true);
+    const syncCollection = (collectionName: string, setter: Function, orderField: string = 'date') => {
+      const q = query(collection(db, 'users', SHARED_BUSINESS_ID, collectionName), orderBy(orderField, 'desc'));
+      return onSnapshot(q, (snapshot) => {
+        const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        setter(data);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, `users/${SHARED_BUSINESS_ID}/${collectionName}`);
+      });
+    };
+
+    const unsubProducts = onSnapshot(collection(db, 'users', SHARED_BUSINESS_ID, 'products'), (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      setProducts(data as Product[]);
+    });
+
+    const unsubSales = syncCollection('sales', setSales);
+    const unsubExpenses = syncCollection('expenses', setExpenses);
+    const unsubCategories = onSnapshot(collection(db, 'users', SHARED_BUSINESS_ID, 'categories'), (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      setCategories(data.length > 0 ? data as Category[] : DEFAULT_CATEGORIES.map(name => ({ id: generateUUID(), name })));
+    });
+    const unsubCustomers = onSnapshot(collection(db, 'users', SHARED_BUSINESS_ID, 'customers'), (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      setCustomers(data as Customer[]);
+    });
+    const unsubSuppliers = onSnapshot(collection(db, 'users', SHARED_BUSINESS_ID, 'suppliers'), (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      setSuppliers(data as Supplier[]);
+    });
+    const unsubJournal = syncCollection('journalEntries', setJournalEntries);
+    const unsubPurchases = syncCollection('purchases', setPurchases);
+    
+    const unsubProfile = onSnapshot(doc(db, 'users', SHARED_BUSINESS_ID, 'profile', 'data'), (docSnap) => {
+      if (docSnap.exists()) {
+        setBusinessProfile(docSnap.data() as any);
+      }
+      setIsCloudSyncing(false);
+    });
+
+    return () => {
+      unsubProducts();
+      unsubSales();
+      unsubExpenses();
+      unsubCategories();
+      unsubCustomers();
+      unsubSuppliers();
+      unsubJournal();
+      unsubPurchases();
+      unsubProfile();
+    };
+  }, [user]);
 
   const handleLogout = () => {
-    setIsAuthenticated(false);
-    sessionStorage.removeItem('mmk_auth');
+    logout();
   };
 
-  // Sync with LocalStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('mmk_products', JSON.stringify(products));
-    } catch (e) {
-      console.error("Failed to save products to localStorage:", e);
-    }
-  }, [products]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('mmk_sales', JSON.stringify(sales));
-    } catch (e) {
-      console.error("Failed to save sales to localStorage:", e);
-    }
-  }, [sales]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('mmk_expenses', JSON.stringify(expenses));
-    } catch (e) {
-      console.error("Failed to save expenses to localStorage:", e);
-    }
-  }, [expenses]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('mmk_categories', JSON.stringify(categories));
-    } catch (e) {
-      console.error("Failed to save categories to localStorage:", e);
-    }
-  }, [categories]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('mmk_customers', JSON.stringify(customers));
-    } catch (e) {
-      console.error("Failed to save customers to localStorage:", e);
-    }
-  }, [customers]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('mmk_suppliers', JSON.stringify(suppliers));
-    } catch (e) {
-      console.error("Failed to save suppliers to localStorage:", e);
-    }
-  }, [suppliers]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('mmk_journal_entries', JSON.stringify(journalEntries));
-    } catch (e) {
-      console.error("Failed to save journal entries to localStorage:", e);
-    }
-  }, [journalEntries]);
-
-  const hasMigratedRef = React.useRef(false);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('mmk_purchases', JSON.stringify(purchases));
-    } catch (e) {
-      console.error("Failed to save purchases to localStorage:", e);
-    }
-  }, [purchases]);
-
-  // Migration: Create purchase records for existing products that don't have them
-  useEffect(() => {
-    if (hasMigratedRef.current) return;
-    
-    const productsWithoutPurchases = products.filter(p => p.stock > 0 && !purchases.some(pur => pur.productId === p.id));
-    
-    if (productsWithoutPurchases.length > 0) {
-      hasMigratedRef.current = true;
-      const newPurchases: Purchase[] = productsWithoutPurchases.map(p => ({
-        id: generateUUID(),
-        productId: p.id,
-        productName: p.name,
-        quantity: p.stock,
-        costPrice: p.costPrice,
-        shippingPrice: p.shippingPrice || 0,
-        totalAmount: (p.costPrice + (p.shippingPrice || 0)) * p.stock,
-        date: p.createdAt || new Date().toISOString().split('T')[0],
-        supplierId: p.supplierId,
-      }));
-      
-      setPurchases(prev => [...newPurchases, ...prev]);
-      
-      // Also add journal entries for these initial stocks
-      const newEntries: JournalEntry[] = newPurchases.map(p => ({
-        id: generateUUID(),
-        date: p.date,
-        debit_account_id: 'acc_inventory',
-        credit_account_id: 'acc_cash',
-        amount: p.totalAmount,
-        reference_type: 'Expense',
-        description: `Initial Stock Migration: ${p.productName}`,
-        reference_id: p.id,
-      }));
-      
-      setJournalEntries(prev => [...newEntries, ...prev]);
-    }
-  }, [products, purchases]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('mmk_business_profile', JSON.stringify(businessProfile));
-    } catch (e) {
-      console.error("Failed to save business profile to localStorage:", e);
-    }
-  }, [businessProfile]);
+  const isAuthorized = useMemo(() => {
+    return user && user.email && AUTHORIZED_EMAILS.includes(user.email);
+  }, [user]);
 
   // Calculate Stats
   const stats = useMemo<DashboardStats>(() => {
@@ -520,113 +378,147 @@ function MainApp() {
 
   // Handlers
   const handleAddProduct = async (productData: Omit<Product, 'id'>) => {
+    if (!user) return;
     const productId = generateUUID();
-    const newProduct: Product = {
-      ...productData,
-      id: productId,
-    };
-    setProducts([...products, newProduct]);
+    try {
+      // Add product
+      await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'products', productId), {
+        ...productData,
+        id: productId,
+      });
 
-    // If there's initial stock, record it as a purchase
-    if (productData.stock > 0) {
-      const newPurchase: Purchase = {
-        id: generateUUID(),
-        productId: productId,
-        productName: productData.name,
-        quantity: productData.stock,
-        costPrice: productData.costPrice,
-        shippingPrice: productData.shippingPrice || 0,
-        totalAmount: (productData.costPrice + (productData.shippingPrice || 0)) * productData.stock,
-        date: productData.createdAt || new Date().toISOString().split('T')[0],
-        supplierId: productData.supplierId,
-      };
-      setPurchases(prev => [newPurchase, ...prev]);
+      // If there's initial stock, record it as a purchase
+      if (productData.stock > 0) {
+        const purchaseId = generateUUID();
+        const entryId = generateUUID();
+        const totalAmount = (productData.costPrice + (productData.shippingPrice || 0)) * productData.stock;
+        const date = productData.createdAt || new Date().toISOString().split('T')[0];
 
-      // Add journal entry for initial stock
-      const entry: JournalEntry = {
-        id: generateUUID(),
-        date: newPurchase.date,
-        debit_account_id: 'acc_inventory',
-        credit_account_id: 'acc_cash',
-        amount: newPurchase.totalAmount,
-        reference_type: 'Expense',
-        description: `Initial Stock: ${newPurchase.productName}`,
-        reference_id: newPurchase.id,
-      };
-      setJournalEntries(prev => [entry, ...prev]);
+        await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'purchases', purchaseId), {
+          id: purchaseId,
+          productId: productId,
+          productName: productData.name,
+          quantity: productData.stock,
+          costPrice: productData.costPrice,
+          shippingPrice: productData.shippingPrice || 0,
+          totalAmount,
+          date,
+          supplierId: productData.supplierId,
+        });
+
+        // Add journal entry for initial stock
+        await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'journalEntries', entryId), {
+          id: entryId,
+          date,
+          debit_account_id: 'acc_inventory',
+          credit_account_id: 'acc_cash',
+          amount: totalAmount,
+          reference_type: 'Expense',
+          description: `Initial Stock: ${productData.name}`,
+          reference_id: purchaseId,
+        });
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${SHARED_BUSINESS_ID}/products/${productId}`);
     }
   };
 
   const handleUpdateProduct = async (id: string, productData: Partial<Product>) => {
-    setProducts(products.map(p => p.id === id ? { ...p, ...productData } : p));
+    if (!user) return;
+    try {
+      await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'products', id), productData, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${SHARED_BUSINESS_ID}/products/${id}`);
+    }
   };
 
   const handleDeleteProduct = async (id: string) => {
+    if (!user) return;
     showConfirm(
       'Delete Product',
       'Are you sure you want to delete this product?',
-      () => setProducts(products.filter(p => p.id !== id))
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'products', id));
+        } catch (error) {
+          handleFirestoreError(error, OperationType.DELETE, `users/${SHARED_BUSINESS_ID}/products/${id}`);
+        }
+      }
     );
   };
 
   const handleRestock = async (purchaseData: Omit<Purchase, 'id'>) => {
-    const newPurchase: Purchase = {
-      ...purchaseData,
-      id: generateUUID(),
-    };
+    if (!user) return;
+    const purchaseId = generateUUID();
+    const entryId = generateUUID();
     
-    setPurchases(prev => [newPurchase, ...prev]);
-    
-    // Update product stock
-    setProducts(prevProducts => 
-      prevProducts.map(p => 
-        p.id === purchaseData.productId 
-          ? { ...p, stock: p.stock + purchaseData.quantity } 
-          : p
-      )
-    );
+    try {
+      // Add purchase
+      await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'purchases', purchaseId), {
+        ...purchaseData,
+        id: purchaseId,
+      });
+      
+      // Update product stock
+      const product = products.find(p => p.id === purchaseData.productId);
+      if (product) {
+        await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'products', product.id), {
+          stock: product.stock + purchaseData.quantity
+        }, { merge: true });
+      }
 
-    // Add journal entry
-    const entry: JournalEntry = {
-      id: generateUUID(),
-      date: purchaseData.date,
-      debit_account_id: 'acc_inventory',
-      credit_account_id: 'acc_cash',
-      amount: purchaseData.totalAmount,
-      reference_type: 'Expense',
-      description: `Restock: ${purchaseData.productName} (${purchaseData.quantity} units)`,
-      reference_id: newPurchase.id,
-    };
-    setJournalEntries(prev => [entry, ...prev]);
+      // Add journal entry
+      await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'journalEntries', entryId), {
+        id: entryId,
+        date: purchaseData.date,
+        debit_account_id: 'acc_inventory',
+        credit_account_id: 'acc_cash',
+        amount: purchaseData.totalAmount,
+        reference_type: 'Expense',
+        description: `Restock: ${purchaseData.productName} (${purchaseData.quantity} units)`,
+        reference_id: purchaseId,
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${SHARED_BUSINESS_ID}/purchases/${purchaseId}`);
+    }
   };
 
   const handleDeletePurchase = async (id: string) => {
+    if (!user) return;
     const purchaseToDelete = purchases.find(p => p.id === id);
     if (!purchaseToDelete) return;
 
     showConfirm(
       'Delete Purchase Record',
       'Are you sure you want to delete this purchase record? This will automatically revert inventory stock.',
-      () => {
-        // Revert stock
-        setProducts(prevProducts => 
-          prevProducts.map(p => 
-            p.id === purchaseToDelete.productId 
-              ? { ...p, stock: Math.max(0, p.stock - purchaseToDelete.quantity) } 
-              : p
-          )
-        );
+      async () => {
+        try {
+          // Revert stock
+          const product = products.find(p => p.id === purchaseToDelete.productId);
+          if (product) {
+            await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'products', product.id), {
+              stock: Math.max(0, product.stock - purchaseToDelete.quantity)
+            }, { merge: true });
+          }
 
-        // Delete journal entry
-        setJournalEntries(prev => prev.filter(e => e.reference_id !== id));
-        
-        // Delete purchase
-        setPurchases(prev => prev.filter(p => p.id !== id));
+          // Delete journal entry
+          const entry = journalEntries.find(e => e.reference_id === id);
+          if (entry) {
+            await deleteDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'journalEntries', entry.id));
+          }
+          
+          // Delete purchase
+          await deleteDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'purchases', id));
+        } catch (error) {
+          handleFirestoreError(error, OperationType.DELETE, `users/${SHARED_BUSINESS_ID}/purchases/${id}`);
+        }
       }
     );
   };
 
   const handleAddSale = async (saleData: Omit<Sale, 'id' | 'orderNumber'>) => {
+    if (!user) return;
+    
     // Use the selected sale date for order number generation
     const saleDateObj = saleData.saleDate ? new Date(saleData.saleDate) : new Date(saleData.date);
     
@@ -637,160 +529,235 @@ function MainApp() {
              sDate.getMonth() === saleDateObj.getMonth();
     });
     
+    const saleId = generateUUID();
     const newSale: Sale = {
       ...saleData,
-      id: generateUUID(),
+      id: saleId,
       orderNumber: generateOrderNumber(saleDateObj, sameMonthOrders.length),
     };
     
-    // Update stock for each item
-    setProducts(prevProducts => {
-      let updatedProducts = [...prevProducts];
-      newSale.items.forEach(item => {
-        updatedProducts = updatedProducts.map(p => 
-          p.id === item.productId 
-            ? { ...p, stock: p.stock - item.quantity } 
-            : p
-        );
-      });
-      return updatedProducts;
-    });
-    
-    setSales([newSale, ...sales]);
+    try {
+      // Add sale
+      await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'sales', saleId), newSale);
 
-    // Also update or add customer to customer list
-    const existingCustomer = customers.find(c => c.phone === saleData.customer.phone);
-    if (!existingCustomer) {
-      const newCustomer: Customer = {
-        id: generateUUID(),
-        facebookName: saleData.customer.facebookName,
-        orderName: saleData.customer.orderName,
-        phone: saleData.customer.phone,
-        address: saleData.customer.address,
-      };
-      setCustomers([...customers, newCustomer]);
+      // Update stock for each item
+      for (const item of newSale.items) {
+        const product = products.find(p => p.id === item.productId);
+        if (product) {
+          await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'products', product.id), {
+            stock: product.stock - item.quantity
+          }, { merge: true });
+        }
+      }
+
+      // Also update or add customer to customer list
+      const existingCustomer = customers.find(c => c.phone === saleData.customer.phone);
+      if (!existingCustomer) {
+        const customerId = generateUUID();
+        const newCustomer: Customer = {
+          id: customerId,
+          facebookName: saleData.customer.facebookName,
+          orderName: saleData.customer.orderName,
+          phone: saleData.customer.phone,
+          address: saleData.customer.address,
+        };
+        await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'customers', customerId), newCustomer);
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${SHARED_BUSINESS_ID}/sales/${saleId}`);
     }
   };
 
   const handleUpdateSale = async (id: string, saleData: Omit<Sale, 'id' | 'orderNumber'>) => {
+    if (!user) return;
     const oldSale = sales.find(s => s.id === id);
     if (!oldSale) return;
 
-    // Update stock for each item
-    setProducts(prevProducts => {
-      let updatedProducts = [...prevProducts];
-      
+    try {
       // Revert old stock
-      oldSale.items.forEach(item => {
-        updatedProducts = updatedProducts.map(p => 
-          p.id === item.productId 
-            ? { ...p, stock: p.stock + item.quantity } 
-            : p
-        );
-      });
+      for (const item of oldSale.items) {
+        const product = products.find(p => p.id === item.productId);
+        if (product) {
+          await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'products', product.id), {
+            stock: product.stock + item.quantity
+          }, { merge: true });
+        }
+      }
 
       // Apply new stock
-      saleData.items.forEach(item => {
-        updatedProducts = updatedProducts.map(p => 
-          p.id === item.productId 
-            ? { ...p, stock: p.stock - item.quantity } 
-            : p
-        );
+      for (const item of saleData.items) {
+        const product = products.find(p => p.id === item.productId);
+        if (product) {
+          await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'products', product.id), {
+            stock: product.stock - item.quantity
+          }, { merge: true });
+        }
+      }
+
+      // Update sale
+      await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'sales', id), {
+        ...saleData,
+        id,
+        orderNumber: oldSale.orderNumber
       });
-
-      return updatedProducts;
-    });
-
-    setSales(sales.map(s => s.id === id ? { ...s, ...saleData, orderNumber: s.orderNumber } : s));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${SHARED_BUSINESS_ID}/sales/${id}`);
+    }
   };
 
   const handleDeleteSale = async (id: string) => {
+    if (!user) return;
     const saleToDelete = sales.find(s => s.id === id);
     if (!saleToDelete) return;
 
     showConfirm(
       'Delete Order',
       'Are you sure you want to delete this order? This will automatically revert inventory stock.',
-      () => {
-        // Revert stock
-        setProducts(prevProducts => {
-          let updatedProducts = [...prevProducts];
-          saleToDelete.items.forEach(item => {
-            updatedProducts = updatedProducts.map(p => 
-              p.id === item.productId 
-                ? { ...p, stock: p.stock + item.quantity } 
-                : p
-            );
-          });
-          return updatedProducts;
-        });
+      async () => {
+        try {
+          // Revert stock
+          for (const item of saleToDelete.items) {
+            const product = products.find(p => p.id === item.productId);
+            if (product) {
+              await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'products', product.id), {
+                stock: product.stock + item.quantity
+              }, { merge: true });
+            }
+          }
 
-        setSales(sales.filter(s => s.id !== id));
+          // Delete sale
+          await deleteDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'sales', id));
+        } catch (error) {
+          handleFirestoreError(error, OperationType.DELETE, `users/${SHARED_BUSINESS_ID}/sales/${id}`);
+        }
       }
     );
   };
 
   const handleAddExpense = async (expenseData: Omit<Expense, 'id'>) => {
-    const newExpense: Expense = {
-      ...expenseData,
-      id: generateUUID(),
-    };
-    setExpenses([newExpense, ...expenses]);
+    if (!user) return;
+    const id = generateUUID();
+    try {
+      await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'expenses', id), { ...expenseData, id });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${SHARED_BUSINESS_ID}/expenses/${id}`);
+    }
   };
 
   const handleUpdateExpense = async (id: string, expenseData: Partial<Expense>) => {
-    setExpenses(expenses.map(e => e.id === id ? { ...e, ...expenseData } : e));
+    if (!user) return;
+    try {
+      await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'expenses', id), expenseData, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${SHARED_BUSINESS_ID}/expenses/${id}`);
+    }
   };
 
   const handleDeleteExpense = async (id: string) => {
+    if (!user) return;
     showConfirm(
       'Delete Expense',
       'Are you sure you want to delete this expense?',
-      () => setExpenses(expenses.filter(e => e.id !== id))
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'expenses', id));
+        } catch (error) {
+          handleFirestoreError(error, OperationType.DELETE, `users/${SHARED_BUSINESS_ID}/expenses/${id}`);
+        }
+      }
     );
   };
 
-  const handleAddCategory = (name: string, parentId?: string) => {
-    setCategories([...categories, { id: generateUUID(), name, parentId }]);
+  const handleAddCategory = async (name: string, parentId?: string) => {
+    if (!user) return;
+    const id = generateUUID();
+    try {
+      await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'categories', id), { id, name, parentId });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${SHARED_BUSINESS_ID}/categories/${id}`);
+    }
   };
 
-  const handleUpdateCategory = (id: string, name: string) => {
-    setCategories(categories.map(c => c.id === id ? { ...c, name } : c));
+  const handleUpdateCategory = async (id: string, name: string) => {
+    if (!user) return;
+    try {
+      await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'categories', id), { name }, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${SHARED_BUSINESS_ID}/categories/${id}`);
+    }
   };
 
-  const handleDeleteCategory = (id: string) => {
+  const handleDeleteCategory = async (id: string) => {
+    if (!user) return;
     showConfirm(
       'Delete Category',
       'Are you sure you want to delete this category? All its subcategories will also be removed.',
-      () => setCategories(categories.filter(c => c.id !== id && c.parentId !== id))
+      async () => {
+        try {
+          // Note: In a real app, you'd also delete subcategories in Firestore
+          await deleteDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'categories', id));
+        } catch (error) {
+          handleFirestoreError(error, OperationType.DELETE, `users/${SHARED_BUSINESS_ID}/categories/${id}`);
+        }
+      }
     );
   };
 
-  const handleUpdateCustomer = (id: string, customerData: Partial<Customer>) => {
-    setCustomers(customers.map(c => c.id === id ? { ...c, ...customerData } : c));
+  const handleUpdateCustomer = async (id: string, customerData: Partial<Customer>) => {
+    if (!user) return;
+    try {
+      await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'customers', id), customerData, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${SHARED_BUSINESS_ID}/customers/${id}`);
+    }
   };
 
-  const handleDeleteCustomer = (id: string) => {
+  const handleDeleteCustomer = async (id: string) => {
+    if (!user) return;
     showConfirm(
       'Delete Customer',
       'Are you sure you want to delete this customer?',
-      () => setCustomers(customers.filter(c => c.id !== id))
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'customers', id));
+        } catch (error) {
+          handleFirestoreError(error, OperationType.DELETE, `users/${SHARED_BUSINESS_ID}/customers/${id}`);
+        }
+      }
     );
   };
 
-  const handleAddSupplier = (name: string, phone: string) => {
-    setSuppliers([...suppliers, { id: generateUUID(), name, phone }]);
+  const handleAddSupplier = async (name: string, phone: string) => {
+    if (!user) return;
+    const id = generateUUID();
+    try {
+      await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'suppliers', id), { id, name, phone });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${SHARED_BUSINESS_ID}/suppliers/${id}`);
+    }
   };
 
-  const handleUpdateSupplier = (id: string, name: string, phone: string) => {
-    setSuppliers(suppliers.map(s => s.id === id ? { ...s, name, phone } : s));
+  const handleUpdateSupplier = async (id: string, name: string, phone: string) => {
+    if (!user) return;
+    try {
+      await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'suppliers', id), { name, phone }, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${SHARED_BUSINESS_ID}/suppliers/${id}`);
+    }
   };
 
-  const handleDeleteSupplier = (id: string) => {
+  const handleDeleteSupplier = async (id: string) => {
+    if (!user) return;
     showConfirm(
       'Delete Supplier',
       'Are you sure you want to delete this supplier?',
-      () => setSuppliers(suppliers.filter(s => s.id !== id))
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'suppliers', id));
+        } catch (error) {
+          handleFirestoreError(error, OperationType.DELETE, `users/${SHARED_BUSINESS_ID}/suppliers/${id}`);
+        }
+      }
     );
   };
 
@@ -816,22 +783,49 @@ function MainApp() {
     URL.revokeObjectURL(url);
   };
 
-  const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportData = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const data = JSON.parse(e.target?.result as string);
         
-        if (data.products) setProducts(data.products);
-        if (data.sales) setSales(data.sales);
-        if (data.expenses) setExpenses(data.expenses);
-        if (data.categories) setCategories(data.categories);
-        if (data.customers) setCustomers(data.customers);
-        if (data.suppliers) setSuppliers(data.suppliers);
-        if (data.businessProfile) setBusinessProfile(data.businessProfile);
+        // Write all data to Firestore
+        if (data.products) {
+          for (const item of data.products) {
+            await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'products', item.id), item);
+          }
+        }
+        if (data.sales) {
+          for (const item of data.sales) {
+            await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'sales', item.id), item);
+          }
+        }
+        if (data.expenses) {
+          for (const item of data.expenses) {
+            await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'expenses', item.id), item);
+          }
+        }
+        if (data.categories) {
+          for (const item of data.categories) {
+            await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'categories', item.id), item);
+          }
+        }
+        if (data.customers) {
+          for (const item of data.customers) {
+            await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'customers', item.id), item);
+          }
+        }
+        if (data.suppliers) {
+          for (const item of data.suppliers) {
+            await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'suppliers', item.id), item);
+          }
+        }
+        if (data.businessProfile) {
+          await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'profile', 'data'), data.businessProfile);
+        }
         
         alert('Data imported successfully! ဒေတာများ အောင်မြင်စွာ ထည့်သွင်းပြီးပါပြီ။');
       } catch (error) {
@@ -857,8 +851,31 @@ function MainApp() {
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
-  if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />;
+  if (!user) {
+    return <Login />;
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full text-center p-8">
+          <div className="flex justify-center mb-6">
+            <div className="bg-red-100 p-4 rounded-full">
+              <X className="w-12 h-12 text-red-600" />
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+          <p className="text-gray-600 mb-6">
+            သင်၏ Email (<strong>{user.email}</strong>) သည် ဤ App ကို အသုံးပြုရန် ခွင့်ပြုချက်မရရှိထားပါ။ 
+            ကျေးဇူးပြု၍ Admin ကို ဆက်သွယ်ပါ။
+          </p>
+          <Button onClick={handleLogout} variant="outline" className="w-full">
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+          </Button>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -901,8 +918,13 @@ function MainApp() {
             <div className="bg-zinc-50 rounded-lg p-3">
               <p className="text-xs text-zinc-500 uppercase font-semibold tracking-wider mb-1">Status</p>
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                <span className="text-sm font-medium text-zinc-700">Local Storage Active</span>
+                <div className={cn(
+                  "w-2 h-2 rounded-full animate-pulse",
+                  isCloudSyncing ? "bg-amber-500" : "bg-emerald-500"
+                )} />
+                <span className="text-sm font-medium text-zinc-700">
+                  {isCloudSyncing ? 'Syncing...' : 'Cloud Sync Active'}
+                </span>
               </div>
             </div>
             <Button 
@@ -1074,6 +1096,14 @@ function MainApp() {
                         <p className="text-xs text-zinc-500">Paste your deployed Google Apps Script URL here to enable cloud backup.</p>
                       </div>
                     </div>
+                    <div className="mt-6 flex justify-end">
+                      <Button 
+                        onClick={handleSaveBusinessProfile}
+                        className="bg-zinc-900 text-white"
+                      >
+                        Save Business Profile
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -1096,105 +1126,6 @@ function MainApp() {
                         >
                           {isSyncing ? 'Syncing...' : 'Sync to Google Sheets'}
                         </Button>
-                      </div>
-                      <div className="space-y-4">
-                        <h3 className="font-medium">Supabase Cloud Sync</h3>
-                        <p className="text-sm text-zinc-500">Backup all your records to your connected Supabase database.</p>
-                        <Button 
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                          onClick={syncToSupabase}
-                          disabled={isSupabaseSyncing}
-                        >
-                          {isSupabaseSyncing ? 'Syncing...' : 'Sync to Supabase'}
-                        </Button>
-                        <Button 
-                          variant="outline"
-                          className="w-full mt-2"
-                          onClick={async () => {
-                            if (!supabase) {
-                              alert('Supabase is not configured.');
-                              return;
-                            }
-                            try {
-                              const { data, error } = await supabase.from('products').select('*').limit(1);
-                              if (error) throw error;
-                              alert('Connection successful! Supabase နှင့် ချိတ်ဆက်မှု အောင်မြင်ပါသည်။');
-                            } catch (error) {
-                              console.error('Supabase connection error:', error);
-                              alert('Connection failed. Please check your keys and table permissions. Error: ' + (error instanceof Error ? error.message : 'Unknown error'));
-                            }
-                          }}
-                        >
-                          Test Supabase Connection
-                        </Button>
-
-                        <div className="mt-4 p-4 bg-zinc-900 rounded-lg overflow-hidden">
-                          <div className="flex justify-between items-center mb-2">
-                            <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Supabase SQL Schema</h4>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-7 text-[10px] text-zinc-300 hover:text-white hover:bg-zinc-800"
-                              onClick={() => {
-                                const sql = `-- Supabase SQL Editor ထဲမှာ ဒါကို Copy ကူးပြီး Run ပေးပါ
-
--- 1. Create Tables (If not exist)
-CREATE TABLE IF NOT EXISTS products (id TEXT PRIMARY KEY, name TEXT, category TEXT, subCategory TEXT, costPrice NUMERIC, shippingPrice NUMERIC, sellingPrice NUMERIC, stock INTEGER, madeIn TEXT, supplierId TEXT, createdAt TEXT);
-CREATE TABLE IF NOT EXISTS sales (id TEXT PRIMARY KEY, orderNumber TEXT, items JSONB, customer JSONB, totalRevenue NUMERIC, totalCost NUMERIC, date TEXT, saleDate TEXT, deliveryDate TEXT, paymentVoucherUrl TEXT);
-CREATE TABLE IF NOT EXISTS expenses (id TEXT PRIMARY KEY, type TEXT, amount NUMERIC, description TEXT, date TEXT, voucherUrl TEXT);
-CREATE TABLE IF NOT EXISTS categories (id TEXT PRIMARY KEY, name TEXT, parentId TEXT);
-CREATE TABLE IF NOT EXISTS customers (id TEXT PRIMARY KEY, facebookName TEXT, orderName TEXT, phone TEXT, address TEXT);
-CREATE TABLE IF NOT EXISTS suppliers (id TEXT PRIMARY KEY, name TEXT, phone TEXT);
-CREATE TABLE IF NOT EXISTS purchases (id TEXT PRIMARY KEY, productId TEXT, productName TEXT, quantity INTEGER, costPrice NUMERIC, shippingPrice NUMERIC, totalAmount NUMERIC, date TEXT, supplierId TEXT);
-CREATE TABLE IF NOT EXISTS journal_entries (id TEXT PRIMARY KEY, date TEXT, debit_account_id TEXT, credit_account_id TEXT, amount NUMERIC, reference_type TEXT, description TEXT, reference_id TEXT, contact_id TEXT);
-CREATE TABLE IF NOT EXISTS business_profile (id TEXT PRIMARY KEY, name TEXT, address TEXT, phone TEXT, googleSheetUrl TEXT);
-
--- 2. Add missing columns (If tables already exist)
-ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT;
-ALTER TABLE products ADD COLUMN IF NOT EXISTS subCategory TEXT;
-ALTER TABLE products ADD COLUMN IF NOT EXISTS madeIn TEXT;
-ALTER TABLE products ADD COLUMN IF NOT EXISTS supplierId TEXT;
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS items JSONB;
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer JSONB;
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS saleDate TEXT;
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS deliveryDate TEXT;
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS paymentVoucherUrl TEXT;`;
-                                navigator.clipboard.writeText(sql);
-                                alert('SQL Script copied to clipboard!');
-                              }}
-                            >
-                              Copy SQL
-                            </Button>
-                          </div>
-                          <p className="text-[10px] text-zinc-500 mb-2">
-                            Supabase SQL Editor ထဲမှာ အောက်ပါ Script ကို Run ပေးမှ Sync လုပ်လို့ရပါမယ်။
-                          </p>
-                          <pre className="text-[9px] text-emerald-400 font-mono overflow-x-auto whitespace-pre p-2 bg-black/50 rounded">
-{`CREATE TABLE IF NOT EXISTS products (
-  id TEXT PRIMARY KEY,
-  name TEXT,
-  category TEXT,
-  subCategory TEXT,
-  costPrice NUMERIC,
-  shippingPrice NUMERIC,
-  sellingPrice NUMERIC,
-  stock INTEGER,
-  madeIn TEXT,
-  supplierId TEXT,
-  createdAt TEXT
-);`}
-                          </pre>
-                        </div>
-                        {!isSupabaseConfigured() && (
-                          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
-                            <p className="text-xs text-red-600 font-medium">Supabase is not configured.</p>
-                            <div className="text-[11px] text-red-500 mt-1 space-y-1">
-                              <p>• AI Studio မှာဆိုရင်: ညာဘက်အပေါ်က Gear Icon (Settings) &gt; Environment Variables ထဲမှာ ထည့်ပါ။</p>
-                              <p>• Vercel မှာဆိုရင်: Project Settings &gt; Environment Variables ထဲမှာ ထည့်ပါ။</p>
-                              <p className="font-semibold mt-1 italic">VITE_SUPABASE_URL နဲ့ VITE_SUPABASE_ANON_KEY ကို အသုံးပြုပေးပါ။</p>
-                            </div>
-                          </div>
-                        )}
                       </div>
                       <div className="space-y-4">
                         <h3 className="font-medium">Export Data</h3>

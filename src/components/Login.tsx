@@ -1,31 +1,28 @@
 import React, { useState } from 'react';
-import { Lock, User, LogIn, AlertCircle } from 'lucide-react';
+import { Lock, User, LogIn, AlertCircle, Mail } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Label } from './ui/Label';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/Card';
+import { signInWithGoogle } from '../firebase';
 
 interface LoginProps {
-  onLogin: (username: string, password: string) => boolean;
 }
 
-export function Login({ onLogin }: LoginProps) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+export function Login({ }: LoginProps) {
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
     setError('');
-    
-    if (!username || !password) {
-      setError('Please enter both username and password.');
-      return;
-    }
-
-    const success = onLogin(username, password);
-    if (!success) {
-      setError('Invalid username or password.');
+    try {
+      await signInWithGoogle();
+    } catch (err: any) {
+      console.error("Google Sign-In Error:", err);
+      setError(err.message || 'Failed to sign in with Google.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -40,45 +37,28 @@ export function Login({ onLogin }: LoginProps) {
           <p className="text-sm text-zinc-500">Enter your credentials to access the POS</p>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
-                <Input
-                  id="username"
-                  placeholder="admin"
-                  className="pl-10"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  className="pl-10"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            </div>
+          <div className="space-y-4">
             {error && (
               <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-3 rounded-md border border-red-100">
                 <AlertCircle className="h-4 w-4" />
                 <span>{error}</span>
               </div>
             )}
-            <Button type="submit" className="w-full h-11 text-base font-medium">
-              <LogIn className="h-4 w-4 mr-2" />
-              Sign In
+
+            <Button 
+              type="button" 
+              className="w-full h-12 text-base font-medium bg-zinc-900 hover:bg-zinc-800 text-white shadow-lg shadow-zinc-200"
+              onClick={handleGoogleSignIn}
+              disabled={isLoading}
+            >
+              <Mail className="h-5 w-5 mr-3 text-white" />
+              Sign in with Google
             </Button>
-          </form>
+            
+            <p className="text-xs text-center text-zinc-500 mt-4">
+              Sign in with your Google account to enable cloud backup and sync across devices.
+            </p>
+          </div>
         </CardContent>
         <CardFooter className="flex flex-col space-y-2">
           <p className="text-xs text-left text-zinc-400">
