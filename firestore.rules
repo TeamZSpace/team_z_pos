@@ -48,8 +48,7 @@ service cloud.firestore {
     function isAuthorized() {
       let authorizedEmails = [
         "diginestt2026@gmail.com",
-        "myatbinance@gmail.com",
-        "vignekiko@gmail.com"
+        "myatbinance@gmail.com"
       ];
       return isAuthenticated() && 
              request.auth.token.email_verified == true && 
