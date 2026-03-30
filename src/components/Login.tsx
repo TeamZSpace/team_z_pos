@@ -20,7 +20,12 @@ export function Login({ }: LoginProps) {
       await signInWithGoogle();
     } catch (err: any) {
       console.error("Google Sign-In Error:", err);
-      setError(err.message || 'Failed to sign in with Google.');
+      if (err.code === 'auth/unauthorized-domain') {
+        const domain = window.location.hostname;
+        setError(`Firebase Error: Unauthorized Domain (${domain}). Please add this domain to your Firebase Console under Authentication > Settings > Authorized domains.`);
+      } else {
+        setError(err.message || 'Failed to sign in with Google.');
+      }
     } finally {
       setIsLoading(false);
     }
