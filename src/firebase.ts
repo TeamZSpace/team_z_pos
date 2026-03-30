@@ -13,6 +13,14 @@ export const googleProvider = new GoogleAuthProvider();
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
 export const logout = () => signOut(auth);
 
+function isAuthorized() {
+  let authorizedEmails = [
+    "diginestt2026@gmail.com",
+    "myatbinance@gmail.com"
+  ];
+  // ...
+}
+
 // Connection test
 async function testConnection() {
   try {
