@@ -175,36 +175,33 @@ export const InventoryManager = ({
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Product Inventory
+      <Card className="shadow-sm border-zinc-200">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+            <Package className="h-4 w-4 text-zinc-400" />
+            Inventory List
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Product Name</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Sub Category</TableHead>
-                  <TableHead>Supplier</TableHead>
-                  <TableHead>Made In</TableHead>
-                  <TableHead>Landed Cost</TableHead>
-                  <TableHead>Selling Price</TableHead>
-                  <TableHead>Margin %</TableHead>
-                  <TableHead>Stock</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+                <TableRow className="hover:bg-transparent border-zinc-100">
+                  <TableHead className="text-[10px] font-bold uppercase text-zinc-400">Product</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase text-zinc-400">Category</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase text-zinc-400">Supplier</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase text-zinc-400">Landed Cost</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase text-zinc-400">Selling</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase text-zinc-400">Margin</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase text-zinc-400 text-center">Stock</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase text-zinc-400 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-8 text-zinc-500">
-                      No products found.
+                    <TableCell colSpan={8} className="text-center py-12 text-zinc-400 text-xs">
+                      No products found
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -213,67 +210,57 @@ export const InventoryManager = ({
                     const margin = calculateMargin(product.sellingPrice, landedCost);
                     
                     return (
-                      <TableRow key={product.id}>
-                        <TableCell className="font-medium">{product.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{product.category}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {product.subCategory ? (
-                            <Badge variant="secondary" className="bg-zinc-100 text-zinc-600 border-zinc-200">
-                              {product.subCategory}
-                            </Badge>
-                          ) : (
-                            <span className="text-zinc-400 text-xs">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {product.supplierId ? (
-                            <span className="text-xs font-medium">
-                              {suppliers.find(s => s.id === product.supplierId)?.name || 'Unknown'}
-                            </span>
-                          ) : (
-                            <span className="text-zinc-400 text-xs">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {product.madeIn ? (
-                            <span className="text-xs">{product.madeIn}</span>
-                          ) : (
-                            <span className="text-zinc-400 text-xs">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col items-center">
-                            <span>{formatCurrency(landedCost)}</span>
-                            <span className="text-[10px] text-zinc-400">
-                              Base: {formatCurrency(product.costPrice)} + Ship: {formatCurrency(product.shippingPrice || 0)}
-                            </span>
+                      <TableRow key={product.id} className="border-zinc-50 hover:bg-zinc-50/50 transition-colors">
+                        <TableCell className="py-3">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-zinc-900">{product.name}</span>
+                            <span className="text-[10px] text-zinc-400">{product.madeIn || 'N/A'}</span>
                           </div>
                         </TableCell>
-                        <TableCell>{formatCurrency(product.sellingPrice)}</TableCell>
                         <TableCell>
-                          <span className={cn(
-                            "font-semibold",
-                            margin > 30 ? "text-emerald-600" : margin > 15 ? "text-amber-600" : "text-red-600"
-                          )}>
-                            {margin.toFixed(1)}%
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-tight">{product.category}</span>
+                            {product.subCategory && (
+                              <span className="text-[9px] text-zinc-400">{product.subCategory}</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-[10px] font-medium text-zinc-600">
+                            {suppliers.find(s => s.id === product.supplierId)?.name || '-'}
                           </span>
                         </TableCell>
-                        <TableCell>{product.stock}</TableCell>
                         <TableCell>
-                          {product.stock <= 5 ? (
-                            <Badge variant="destructive">Low Stock</Badge>
-                          ) : (
-                            <Badge variant="success">In Stock</Badge>
-                          )}
+                          <div className="flex flex-col">
+                            <span className="text-xs font-semibold text-zinc-700">{formatCurrency(landedCost)}</span>
+                            <span className="text-[9px] text-zinc-400">Base: {formatCurrency(product.costPrice)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs font-bold text-zinc-900">
+                          {formatCurrency(product.sellingPrice)}
                         </TableCell>
                         <TableCell>
-                          <div className="flex justify-center gap-2">
+                          <span className={cn(
+                            "text-[10px] font-bold px-1.5 py-0.5 rounded",
+                            margin > 30 ? "bg-emerald-50 text-emerald-600" : margin > 15 ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-600"
+                          )}>
+                            {margin.toFixed(0)}%
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className={cn(
+                            "text-xs font-bold",
+                            product.stock <= 5 ? "text-red-500" : "text-zinc-600"
+                          )}>
+                            {product.stock}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              title="Restock / Purchase"
+                              className="h-7 w-7 text-zinc-400 hover:text-blue-500"
                               onClick={() => {
                                 setRestockProduct(product);
                                 setRestockData({
@@ -285,13 +272,23 @@ export const InventoryManager = ({
                                 setIsRestockDialogOpen(true);
                               }}
                             >
-                              <RefreshCw className="h-4 w-4 text-blue-500" />
+                              <RefreshCw className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
-                              <Edit2 className="h-4 w-4" />
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 text-zinc-400 hover:text-zinc-900"
+                              onClick={() => handleEdit(product)}
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => onDeleteProduct(product.id)}>
-                              <Trash2 className="h-4 w-4 text-red-500" />
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 text-zinc-400 hover:text-red-500"
+                              onClick={() => onDeleteProduct(product.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </TableCell>
@@ -406,12 +403,12 @@ export const InventoryManager = ({
               </div>
             </div>
 
-            <div className="bg-zinc-50 p-3 rounded-lg flex items-center justify-between border border-zinc-200">
-              <div className="flex items-center gap-2 text-zinc-600">
+            <div className="bg-zinc-50 p-4 rounded-lg flex items-center justify-between border border-zinc-100">
+              <div className="flex items-center gap-2 text-zinc-500">
                 <Info className="h-4 w-4" />
-                <span className="text-sm font-medium">Landed Cost:</span>
+                <span className="text-xs font-bold uppercase tracking-wider">Landed Cost</span>
               </div>
-              <span className="font-bold text-zinc-900">
+              <span className="text-lg font-bold text-zinc-900">
                 {formatCurrency(Number(formData.costPrice || 0) + Number(formData.shippingPrice || 0))}
               </span>
             </div>
@@ -509,15 +506,15 @@ export const InventoryManager = ({
               />
             </div>
 
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+            <div className="bg-zinc-900 p-5 rounded-lg border border-zinc-800">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-sm text-blue-600">Total Purchase Amount:</span>
-                <span className="text-lg font-bold text-blue-700">
+                <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">Total Purchase</span>
+                <span className="text-xl font-bold text-white">
                   {formatCurrency((Number(restockData.costPrice || 0) + Number(restockData.shippingPrice || 0)) * Number(restockData.quantity || 0))}
                 </span>
               </div>
-              <p className="text-[10px] text-blue-500 italic">
-                * This amount will be recorded as a cash outflow from your sales revenue.
+              <p className="text-[10px] text-zinc-500">
+                This transaction will be recorded as a cash outflow.
               </p>
             </div>
 

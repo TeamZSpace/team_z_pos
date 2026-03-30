@@ -24,6 +24,7 @@ import {
   Cloud,
   CloudOff
 } from 'lucide-react';
+import { Toaster, toast } from 'sonner';
 import { ProfitLossDashboard } from './components/ProfitLossDashboard';
 import { InventoryManager } from './components/InventoryManager';
 import { SalesEntry } from './components/SalesEntry';
@@ -37,6 +38,7 @@ import { Card, CardHeader, CardTitle, CardContent } from './components/ui/Card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from './components/ui/Dialog';
 import { Login } from './components/Login';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { POSView } from './components/POSView';
 import { Product, Sale, Expense, DashboardStats, Category, Customer, Supplier, MonthlyReport, JournalEntry, Account, Purchase } from './types';
 import { cn, generateOrderNumber, generateUUID } from './lib/utils';
 import { DEFAULT_CATEGORIES, DEFAULT_ACCOUNTS } from './constants';
@@ -127,6 +129,7 @@ type Tab = 'dashboard' | 'inventory' | 'purchases' | 'sales' | 'expenses' | 'cat
 export default function App() {
   return (
     <ErrorBoundary>
+      <Toaster position="top-right" richColors />
       <MainApp />
     </ErrorBoundary>
   );
@@ -183,7 +186,7 @@ function MainApp() {
 
   const syncToGoogleSheets = async () => {
     if (!businessProfile.googleSheetUrl) {
-      alert('Please set your Google Sheet Web App URL in Settings first.');
+      toast.error('Please set your Google Sheet Web App URL in Settings first.');
       return;
     }
 
@@ -216,10 +219,10 @@ function MainApp() {
 
       // Since mode is 'no-cors', we can't read the response body, 
       // but if it doesn't throw an error, it's usually sent successfully.
-      alert('Data sync request sent! ကျေးဇူးပြု၍ သင်၏ Google Sheet ကို စစ်ဆေးကြည့်ပါ။ ဒေတာများ ရောက်ရှိရန် စက္ကန့်အနည်းငယ် ကြာနိုင်ပါသည်။');
+      toast.success('Data sync request sent! ကျေးဇူးပြု၍ သင်၏ Google Sheet ကို စစ်ဆေးကြည့်ပါ။');
     } catch (error) {
       console.error('Sync error details:', error);
-      alert('Sync လုပ်ဆောင်ချက် မအောင်မြင်ပါ။ အင်တာနက် ချိတ်ဆက်မှု သို့မဟုတ် URL မှန်ကန်မှုကို ပြန်စစ်ပေးပါ။ Error: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Sync လုပ်ဆောင်ချက် မအောင်မြင်ပါ။ အင်တာနက် ချိတ်ဆက်မှု သို့မဟုတ် URL မှန်ကန်မှုကို ပြန်စစ်ပေးပါ။');
     } finally {
       setIsSyncing(false);
     }
@@ -229,7 +232,7 @@ function MainApp() {
     if (!user) return;
     try {
       await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'profile', 'data'), businessProfile);
-      alert('Business profile saved successfully! လုပ်ငန်းအချက်အလက်များကို အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ။');
+      toast.success('Business profile saved successfully!');
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `users/${SHARED_BUSINESS_ID}/profile/data`);
     }
@@ -683,11 +686,11 @@ function MainApp() {
     try {
       console.log('Adding category:', { id, name, parentId });
       await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'categories', id), { id, name, parentId });
-      alert('Category added successfully! အမျိုးအစားအသစ်ကို အောင်မြင်စွာ ထည့်သွင်းပြီးပါပြီ။');
+      toast.success('Category added successfully!');
     } catch (error) {
       console.error('Error adding category:', error);
       handleFirestoreError(error, OperationType.WRITE, `users/${SHARED_BUSINESS_ID}/categories/${id}`);
-      alert('Error adding category. Please try again.');
+      toast.error('Error adding category. Please try again.');
     }
   };
 
@@ -695,10 +698,10 @@ function MainApp() {
     if (!user) return;
     try {
       await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'categories', id), { name }, { merge: true });
-      alert('Category updated successfully!');
+      toast.success('Category updated successfully!');
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `users/${SHARED_BUSINESS_ID}/categories/${id}`);
-      alert('Error updating category.');
+      toast.error('Error updating category.');
     }
   };
 
@@ -842,10 +845,10 @@ function MainApp() {
           await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'profile', 'data'), data.businessProfile);
         }
         
-        alert('Data imported successfully! ဒေတာများ အောင်မြင်စွာ ထည့်သွင်းပြီးပါပြီ။');
+        toast.success('Data imported successfully!');
       } catch (error) {
         console.error('Import error:', error);
-        alert('Failed to import data. Please check the file format. ဒေတာ ထည့်သွင်းမှု မအောင်မြင်ပါ။ ဖိုင်ပုံစံ မှန်မမှန် ပြန်စစ်ပေးပါ။');
+        toast.error('Failed to import data. Please check the file format.');
       }
     };
     reader.readAsText(file);
@@ -866,21 +869,32 @@ function MainApp() {
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
+  if (!isAuthReady) {
+    return (
+      <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-zinc-900 border-t-transparent rounded-full animate-spin" />
+          <p className="text-zinc-500 font-medium">Loading POS System...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!user) {
     return <Login />;
   }
 
   if (!isAuthorized) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full text-center p-8">
+      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full text-center p-8 border-none shadow-sm">
           <div className="flex justify-center mb-6">
-            <div className="bg-red-100 p-4 rounded-full">
+            <div className="bg-red-50 p-4 rounded-full">
               <X className="w-12 h-12 text-red-600" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-          <p className="text-gray-600 mb-6">
+          <h1 className="text-2xl font-bold text-zinc-900 mb-2">Access Denied</h1>
+          <p className="text-zinc-500 mb-6">
             သင်၏ Email (<strong>{user.email}</strong>) သည် ဤ App ကို အသုံးပြုရန် ခွင့်ပြုချက်မရရှိထားပါ။ 
             ကျေးဇူးပြု၍ Admin ကို ဆက်သွယ်ပါ။
           </p>
@@ -897,88 +911,75 @@ function MainApp() {
     <div className="min-h-screen bg-zinc-50 flex">
       {/* Sidebar for Desktop */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-zinc-200 transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-0",
+        "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-zinc-200 transition-all duration-300 lg:translate-x-0 lg:static lg:inset-0 flex flex-col py-6",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        <div className="h-full flex flex-col">
-          <div className="p-6 flex items-center gap-3">
-            <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center">
-              <DollarSign className="text-white h-5 w-5" />
-            </div>
-            <h1 className="font-bold text-xl tracking-tight truncate">{businessProfile.name}</h1>
+        <div className="px-6 mb-10 shrink-0">
+          <div className="w-10 h-10 bg-zinc-900 rounded-xl flex items-center justify-center">
+            <DollarSign className="text-white h-5 w-5" />
           </div>
+        </div>
 
-          <nav className="flex-1 px-4 space-y-1">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id as Tab);
-                  setIsSidebarOpen(false);
-                }}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  activeTab === item.id 
-                    ? "bg-zinc-900 text-white" 
-                    : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
-                )}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </button>
-            ))}
-          </nav>
-
-          <div className="p-4 border-t border-zinc-200 space-y-2">
-            <div className="bg-zinc-50 rounded-lg p-3">
-              <p className="text-xs text-zinc-500 uppercase font-semibold tracking-wider mb-1">Status</p>
-              <div className="flex items-center gap-2">
-                <div className={cn(
-                  "w-2 h-2 rounded-full animate-pulse",
-                  isCloudSyncing ? "bg-amber-500" : "bg-emerald-500"
-                )} />
-                <span className="text-sm font-medium text-zinc-700">
-                  {isCloudSyncing ? 'Syncing...' : 'Cloud Sync Active'}
-                </span>
-              </div>
-            </div>
-            <Button 
-              variant="ghost" 
-              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-              onClick={handleLogout}
+        <nav className="flex-1 w-full px-3 space-y-1 overflow-y-auto scrollbar-hide">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                setActiveTab(item.id as Tab);
+                setIsSidebarOpen(false);
+              }}
+              className={cn(
+                "w-full flex flex-row items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
+                activeTab === item.id 
+                  ? "bg-zinc-900 text-white" 
+                  : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+              )}
             >
-              <X className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
+              <item.icon className={cn("h-5 w-5", activeTab === item.id ? "text-white" : "text-zinc-400 group-hover:text-zinc-900")} />
+              <span className="text-sm font-semibold tracking-tight">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="w-full px-3 mt-auto pt-6 border-t border-zinc-100">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start gap-3 px-4 h-11 rounded-xl text-red-500 hover:bg-red-50"
+            onClick={handleLogout}
+          >
+            <LogOut className="h-5 w-5" />
+            <span className="text-sm font-semibold">Sign Out</span>
+          </Button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-white border-b border-zinc-200 flex items-center justify-between px-4 lg:px-8">
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="lg:hidden"
-              onClick={() => setIsSidebarOpen(true)}
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-            <h2 className="text-lg font-semibold capitalize">{activeTab}</h2>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-zinc-100 rounded-full">
-              <span className="text-xs font-medium text-zinc-500">Currency:</span>
-              <span className="text-xs font-bold text-zinc-900">MMK</span>
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {activeTab !== 'sales' && (
+          <header className="h-14 bg-white border-b border-zinc-200 flex items-center justify-between px-4 lg:px-8 z-40">
+            <div className="flex items-center gap-4">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="lg:hidden rounded-lg"
+                onClick={() => setIsSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+              <h2 className="text-base font-semibold capitalize tracking-tight">{activeTab}</h2>
             </div>
-          </div>
-        </header>
+            
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-zinc-100 rounded-full">
+                <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Currency</span>
+                <span className="text-xs font-bold text-zinc-900">MMK</span>
+              </div>
+            </div>
+          </header>
+        )}
 
-        <div className="flex-1 overflow-auto p-4 lg:p-8">
-          <div className="max-w-6xl mx-auto">
+        <div className={cn("flex-1 overflow-auto", activeTab !== 'sales' && "p-4 lg:p-8")}>
+          <div className={cn(activeTab !== 'sales' && "max-w-6xl mx-auto")}>
             {activeTab === 'dashboard' && (
               <div className="space-y-6">
                 <AISummary sales={sales} />
@@ -1003,11 +1004,11 @@ function MainApp() {
             )}
             {activeTab === 'sales' && (
               <SalesEntry 
-                products={products} 
-                onAddSale={handleAddSale} 
+                products={products}
+                onAddSale={handleAddSale}
                 onUpdateSale={handleUpdateSale}
                 onDeleteSale={handleDeleteSale}
-                sales={sales} 
+                sales={sales}
               />
             )}
             {activeTab === 'expenses' && (
@@ -1073,42 +1074,42 @@ function MainApp() {
                   <CardContent className="space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Shop Name</label>
+                        <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Shop Name</label>
                         <input
                           type="text"
-                          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-zinc-950"
+                          className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all"
                           value={businessProfile.name}
                           onChange={(e) => setBusinessProfile({ ...businessProfile, name: e.target.value })}
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Phone Number</label>
+                        <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Phone Number</label>
                         <input
                           type="text"
-                          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-zinc-950"
+                          className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all"
                           value={businessProfile.phone}
                           onChange={(e) => setBusinessProfile({ ...businessProfile, phone: e.target.value })}
                         />
                       </div>
                       <div className="space-y-2 sm:col-span-2">
-                        <label className="text-sm font-medium">Address</label>
+                        <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Address</label>
                         <textarea
-                          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-zinc-950"
+                          className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition-all"
                           rows={3}
                           value={businessProfile.address}
                           onChange={(e) => setBusinessProfile({ ...businessProfile, address: e.target.value })}
                         />
                       </div>
                       <div className="space-y-2 sm:col-span-2">
-                        <label className="text-sm font-medium text-emerald-600">Google Sheets Web App URL</label>
+                        <label className="text-xs font-bold uppercase tracking-wider text-emerald-600">Google Sheets Web App URL</label>
                         <input
                           type="text"
                           placeholder="https://script.google.com/macros/s/.../exec"
-                          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className="w-full px-3 py-2 bg-emerald-50/50 border border-emerald-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
                           value={businessProfile.googleSheetUrl || ''}
                           onChange={(e) => setBusinessProfile({ ...businessProfile, googleSheetUrl: e.target.value })}
                         />
-                        <p className="text-xs text-zinc-500">Paste your deployed Google Apps Script URL here to enable cloud backup.</p>
+                        <p className="text-[10px] text-zinc-400 font-medium">Paste your deployed Google Apps Script URL here to enable cloud backup.</p>
                       </div>
                     </div>
                     <div className="mt-6 flex justify-end">

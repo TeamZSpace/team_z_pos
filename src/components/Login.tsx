@@ -5,6 +5,7 @@ import { Input } from './ui/Input';
 import { Label } from './ui/Label';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/Card';
 import { signInWithGoogle } from '../firebase';
+import firebaseConfig from '../../firebase-applet-config.json';
 
 interface LoginProps {
 }
@@ -22,10 +23,11 @@ export function Login({ }: LoginProps) {
       console.error("Google Sign-In Error:", err);
       if (err.code === 'auth/unauthorized-domain') {
         const domain = window.location.hostname;
+        const projectId = firebaseConfig.projectId;
         setError(
           `Google Sign-In Error: Unauthorized Domain (${domain}). 
           To fix this, please go to your Firebase Console: 
-          https://console.firebase.google.com/project/teamzspacebackup/authentication/settings 
+          https://console.firebase.google.com/project/${projectId}/authentication/settings 
           and add "${domain}" to the "Authorized domains" list.`
         );
       } else {
@@ -37,42 +39,63 @@ export function Login({ }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-xl border-zinc-200">
-        <CardHeader className="space-y-1 text-left">
-          <div className="mx-auto w-12 h-12 bg-zinc-900 rounded-xl flex items-center justify-center mb-4">
-            <Lock className="h-6 w-6 text-white" />
+    <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background Decorative Elements */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px]" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px]" />
+
+      <Card className="w-full max-w-md shadow-2xl border-white/20 bg-white/70 backdrop-blur-xl relative z-10 rounded-3xl overflow-hidden">
+        <CardHeader className="space-y-2 text-center pt-10">
+          <div className="mx-auto w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-primary/20 rotate-3">
+            <Lock className="h-8 w-8 text-white" />
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">System Login</CardTitle>
-          <p className="text-sm text-zinc-500">Enter your credentials to access the POS</p>
+          <CardTitle className="text-3xl font-bold tracking-tight text-zinc-900">Welcome Back</CardTitle>
+          <p className="text-zinc-500 font-medium">Securely access your business dashboard</p>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+        <CardContent className="px-8 pb-10">
+          <div className="space-y-6">
             {error && (
-              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-3 rounded-md border border-red-100">
-                <AlertCircle className="h-4 w-4" />
+              <div className="flex items-start gap-3 text-sm text-red-600 bg-red-50/50 backdrop-blur-sm p-4 rounded-2xl border border-red-100">
+                <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
                 <span>{error}</span>
               </div>
             )}
 
-            <Button 
-              type="button" 
-              className="w-full h-12 text-base font-medium bg-zinc-900 hover:bg-zinc-800 text-white shadow-lg shadow-zinc-200"
-              onClick={handleGoogleSignIn}
-              disabled={isLoading}
-            >
-              <Mail className="h-5 w-5 mr-3 text-white" />
-              Sign in with Google
-            </Button>
+            <div className="relative group">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-blue-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+              <Button 
+                type="button" 
+                className="relative w-full h-14 text-lg font-semibold rounded-2xl transition-all duration-300 active:scale-[0.98]"
+                onClick={handleGoogleSignIn}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Mail className="h-5 w-5 mr-3" />
+                    Sign in with Google
+                  </>
+                )}
+              </Button>
+            </div>
             
-            <p className="text-xs text-center text-zinc-500 mt-4">
-              Sign in with your Google account to enable cloud backup and sync across devices.
+            <div className="flex items-center gap-4 py-2">
+              <div className="h-px flex-1 bg-zinc-200"></div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Security Verified</span>
+              <div className="h-px flex-1 bg-zinc-200"></div>
+            </div>
+
+            <p className="text-xs text-center text-zinc-400 leading-relaxed px-4">
+              By signing in, you agree to our terms of service and privacy policy. 
+              Your data is encrypted and synced securely.
             </p>
           </div>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-2">
-          <p className="text-xs text-left text-zinc-400">
-            Secure Access • Team Z Space POS System
+        <CardFooter className="bg-zinc-50/50 border-t border-zinc-100 py-6 px-8 flex justify-center">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            Team Z Space POS System
           </p>
         </CardFooter>
       </Card>

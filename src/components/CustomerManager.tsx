@@ -47,14 +47,14 @@ export function CustomerManager({
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle>Customer Records</CardTitle>
+      <Card className="shadow-sm border-zinc-200">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-bold text-zinc-900">Customer Records</CardTitle>
           <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
             <Input
               placeholder="Search customers..."
-              className="pl-9"
+              className="pl-9 h-9 text-xs"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -63,41 +63,44 @@ export function CustomerManager({
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Facebook Name</TableHead>
-                <TableHead>Order Name</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead>Sales Count</TableHead>
-                <TableHead>Actions</TableHead>
+              <TableRow className="hover:bg-transparent border-zinc-100">
+                <TableHead className="text-[10px] font-bold uppercase text-zinc-400">Facebook Name</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase text-zinc-400">Order Name</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase text-zinc-400">Phone</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase text-zinc-400">Address</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase text-zinc-400 text-center">Sales</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase text-zinc-400 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredCustomers.map((customer) => (
-                <TableRow key={customer.id}>
-                  <TableCell className="font-medium">{customer.facebookName}</TableCell>
-                  <TableCell>{customer.orderName}</TableCell>
-                  <TableCell>{customer.phone}</TableCell>
-                  <TableCell className="max-w-[200px] truncate">{customer.address}</TableCell>
-                  <TableCell className="text-center font-bold text-zinc-900">
-                    {getSalesCount(customer.facebookName, customer.orderName)}
+                <TableRow key={customer.id} className="border-zinc-50 hover:bg-zinc-50/50 transition-colors">
+                  <TableCell className="text-xs font-bold text-zinc-900">{customer.facebookName}</TableCell>
+                  <TableCell className="text-xs text-zinc-500">{customer.orderName}</TableCell>
+                  <TableCell className="text-xs text-zinc-500">{customer.phone}</TableCell>
+                  <TableCell className="text-xs text-zinc-500 max-w-[200px] truncate">{customer.address}</TableCell>
+                  <TableCell className="text-center">
+                    <span className="text-xs font-bold text-zinc-900 bg-zinc-100 px-2 py-0.5 rounded-full">
+                      {getSalesCount(customer.facebookName, customer.orderName)}
+                    </span>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex justify-center gap-2">
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
                       <Button 
                         variant="ghost" 
                         size="icon" 
+                        className="h-7 w-7 text-zinc-400 hover:text-zinc-900"
                         onClick={() => setEditingCustomer(customer)}
                       >
-                        <Pencil className="h-4 w-4" />
+                        <Pencil className="h-3.5 w-3.5" />
                       </Button>
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="text-red-500 hover:text-red-600"
+                        className="h-7 w-7 text-zinc-400 hover:text-red-500"
                         onClick={() => onDeleteCustomer(customer.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </TableCell>
@@ -105,8 +108,8 @@ export function CustomerManager({
               ))}
               {filteredCustomers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-zinc-500">
-                    No customers found.
+                  <TableCell colSpan={6} className="text-center py-12 text-zinc-400 text-xs">
+                    No customers found
                   </TableCell>
                 </TableRow>
               )}
@@ -117,53 +120,57 @@ export function CustomerManager({
 
       {/* Edit Customer Dialog */}
       <Dialog open={!!editingCustomer} onOpenChange={() => setEditingCustomer(null)}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] border-zinc-200">
           <DialogHeader>
-            <DialogTitle>Edit Customer Information</DialogTitle>
+            <DialogTitle className="text-sm font-bold text-zinc-900 uppercase tracking-wider">Edit Customer</DialogTitle>
           </DialogHeader>
           {editingCustomer && (
-            <form onSubmit={handleUpdate} className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="facebookName">Facebook Name</Label>
+            <form onSubmit={handleUpdate} className="space-y-3 py-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="facebookName" className="text-[10px] font-bold uppercase text-zinc-400">Facebook Name</Label>
                 <Input
                   id="facebookName"
+                  className="h-9 text-xs"
                   value={editingCustomer.facebookName}
                   onChange={(e) => setEditingCustomer({ ...editingCustomer, facebookName: e.target.value })}
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="orderName">Order Name</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="orderName" className="text-[10px] font-bold uppercase text-zinc-400">Order Name</Label>
                 <Input
                   id="orderName"
+                  className="h-9 text-xs"
                   value={editingCustomer.orderName}
                   onChange={(e) => setEditingCustomer({ ...editingCustomer, orderName: e.target.value })}
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="phone" className="text-[10px] font-bold uppercase text-zinc-400">Phone</Label>
                 <Input
                   id="phone"
+                  className="h-9 text-xs"
                   value={editingCustomer.phone}
                   onChange={(e) => setEditingCustomer({ ...editingCustomer, phone: convertMyanmarToEnglish(e.target.value) })}
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="address" className="text-[10px] font-bold uppercase text-zinc-400">Address</Label>
                 <Input
                   id="address"
+                  className="h-9 text-xs"
                   value={editingCustomer.address}
                   onChange={(e) => setEditingCustomer({ ...editingCustomer, address: e.target.value })}
                   required
                 />
               </div>
               <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="outline" onClick={() => setEditingCustomer(null)}>
+                <Button type="button" variant="outline" className="h-9 text-xs" onClick={() => setEditingCustomer(null)}>
                   Cancel
                 </Button>
-                <Button type="submit">Save Changes</Button>
+                <Button type="submit" className="h-9 text-xs font-bold uppercase tracking-wider">Save Changes</Button>
               </div>
             </form>
           )}

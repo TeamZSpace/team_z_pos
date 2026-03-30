@@ -54,37 +54,38 @@ export function CategoryManager({
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Add New Category or Subcategory</CardTitle>
+      <Card className="shadow-sm border-zinc-200">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-bold text-zinc-900">New Category</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleAdd} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="parentCategory">Parent Category (Optional)</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="parentCategory" className="text-[10px] font-bold uppercase text-zinc-400">Parent (Optional)</Label>
                 <Select
                   id="parentCategory"
+                  className="h-9 text-xs"
                   value={selectedParentId}
                   onChange={(e) => setSelectedParentId(e.target.value)}
                 >
-                  <option value="">Main Category (None)</option>
+                  <option value="">Main Category</option>
                   {mainCategories.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="categoryName">Category Name</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="categoryName" className="text-[10px] font-bold uppercase text-zinc-400">Name</Label>
                 <div className="flex gap-2">
                   <Input
                     id="categoryName"
-                    placeholder="e.g., Supplements, Face Care"
+                    className="h-9 text-xs"
+                    placeholder="e.g. Supplements"
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
                   />
-                  <Button type="submit">
-                    <Plus className="h-4 w-4 mr-2" />
+                  <Button type="submit" className="h-9 px-4 text-xs font-bold uppercase tracking-wider">
                     Add
                   </Button>
                 </div>
@@ -94,16 +95,16 @@ export function CategoryManager({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Categories & Subcategories</CardTitle>
+      <Card className="shadow-sm border-zinc-200">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-bold text-zinc-900">Category Structure</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Category Structure</TableHead>
-                <TableHead>Actions</TableHead>
+              <TableRow className="hover:bg-transparent border-zinc-100">
+                <TableHead className="text-[10px] font-bold uppercase text-zinc-400">Structure</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase text-zinc-400 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -111,93 +112,95 @@ export function CategoryManager({
                 const subCats = categories.filter(c => c.parentId === mainCat.id);
                 return (
                   <React.Fragment key={mainCat.id}>
-                    {/* Main Category Row */}
-                    <TableRow className="bg-zinc-50/50">
-                      <TableCell className="font-bold">
+                    <TableRow className="bg-zinc-50/30 border-zinc-50">
+                      <TableCell className="py-3">
                         {editingId === mainCat.id ? (
                           <Input
                             value={editingName}
                             onChange={(e) => setEditingName(e.target.value)}
-                            className="max-w-[200px]"
+                            className="h-8 text-xs max-w-[200px]"
                           />
                         ) : (
-                          mainCat.name
+                          <span className="text-xs font-bold text-zinc-900 uppercase tracking-tight">{mainCat.name}</span>
                         )}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex justify-center gap-2">
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
                           {editingId === mainCat.id ? (
-                            <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+                            <Button size="sm" className="h-7 text-[10px]" onClick={handleSaveEdit}>Save</Button>
                           ) : (
                             <>
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                className="text-zinc-500 hover:text-zinc-900"
+                                className="h-7 text-[10px] font-bold text-zinc-400 hover:text-zinc-900"
                                 onClick={() => {
                                   setSelectedParentId(mainCat.id);
                                   document.getElementById('categoryName')?.focus();
                                 }}
                               >
-                                <Plus className="h-4 w-4 mr-1" />
+                                <Plus className="h-3 w-3 mr-1" />
                                 Sub
                               </Button>
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
+                                className="h-7 w-7 text-zinc-400 hover:text-zinc-900"
                                 onClick={() => handleStartEdit(mainCat)}
                               >
-                                <Pencil className="h-4 w-4" />
+                                <Pencil className="h-3.5 w-3.5" />
                               </Button>
                             </>
                           )}
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="text-red-500 hover:text-red-600"
+                            className="h-7 w-7 text-zinc-400 hover:text-red-500"
                             onClick={() => onDeleteCategory(mainCat.id)}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>
                     
-                    {/* Subcategories Rows */}
                     {subCats.map(subCat => (
-                      <TableRow key={subCat.id}>
-                        <TableCell className="pl-10 flex items-center justify-center gap-2">
-                          <ChevronRight className="h-3 w-3 text-zinc-400" />
-                          {editingId === subCat.id ? (
-                            <Input
-                              value={editingName}
-                              onChange={(e) => setEditingName(e.target.value)}
-                              className="max-w-[200px]"
-                            />
-                          ) : (
-                            subCat.name
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex justify-center gap-2">
+                      <TableRow key={subCat.id} className="border-zinc-50 hover:bg-zinc-50/50 transition-colors">
+                        <TableCell className="pl-8 py-2">
+                          <div className="flex items-center gap-2">
+                            <ChevronRight className="h-3 w-3 text-zinc-300" />
                             {editingId === subCat.id ? (
-                              <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+                              <Input
+                                value={editingName}
+                                onChange={(e) => setEditingName(e.target.value)}
+                                className="h-8 text-xs max-w-[200px]"
+                              />
+                            ) : (
+                              <span className="text-xs font-medium text-zinc-600">{subCat.name}</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            {editingId === subCat.id ? (
+                              <Button size="sm" className="h-7 text-[10px]" onClick={handleSaveEdit}>Save</Button>
                             ) : (
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
+                                className="h-7 w-7 text-zinc-400 hover:text-zinc-900"
                                 onClick={() => handleStartEdit(subCat)}
                               >
-                                <Pencil className="h-4 w-4" />
+                                <Pencil className="h-3.5 w-3.5" />
                               </Button>
                             )}
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              className="text-red-500 hover:text-red-600"
+                              className="h-7 w-7 text-zinc-400 hover:text-red-500"
                               onClick={() => onDeleteCategory(subCat.id)}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </TableCell>
@@ -208,8 +211,8 @@ export function CategoryManager({
               })}
               {categories.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={2} className="text-center py-8 text-zinc-500">
-                    No categories added yet.
+                  <TableCell colSpan={2} className="text-center py-12 text-zinc-400 text-xs">
+                    No categories found
                   </TableCell>
                 </TableRow>
               )}
