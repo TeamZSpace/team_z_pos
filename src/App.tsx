@@ -245,35 +245,27 @@ function MainApp() {
     if (!user) return;
 
     setIsCloudSyncing(true);
-    const syncCollection = (collectionName: string, setter: Function, orderField: string = 'date') => {
-      const q = query(collection(db, 'users', SHARED_BUSINESS_ID, collectionName), orderBy(orderField, 'desc'));
+    const syncCollection = (collectionName: string, setter: Function, orderField: string = 'date', useOrderBy: boolean = true) => {
+      const collectionRef = collection(db, 'users', SHARED_BUSINESS_ID, collectionName);
+      const q = useOrderBy ? query(collectionRef, orderBy(orderField, 'desc')) : collectionRef;
+      
       return onSnapshot(q, (snapshot) => {
         const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         setter(data);
       }, (error) => {
+        console.error(`Sync error for ${collectionName}:`, error);
         handleFirestoreError(error, OperationType.LIST, `users/${SHARED_BUSINESS_ID}/${collectionName}`);
       });
     };
 
-    const unsubProducts = onSnapshot(collection(db, 'users', SHARED_BUSINESS_ID, 'products'), (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-      setProducts(data as Product[]);
-    });
-
+    const unsubProducts = syncCollection('products', setProducts, 'createdAt');
     const unsubSales = syncCollection('sales', setSales);
     const unsubExpenses = syncCollection('expenses', setExpenses);
-    const unsubCategories = onSnapshot(collection(db, 'users', SHARED_BUSINESS_ID, 'categories'), (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+    const unsubCategories = syncCollection('categories', (data: any[]) => {
       setCategories(data.length > 0 ? data as Category[] : DEFAULT_CATEGORIES.map(name => ({ id: generateUUID(), name })));
-    });
-    const unsubCustomers = onSnapshot(collection(db, 'users', SHARED_BUSINESS_ID, 'customers'), (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-      setCustomers(data as Customer[]);
-    });
-    const unsubSuppliers = onSnapshot(collection(db, 'users', SHARED_BUSINESS_ID, 'suppliers'), (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-      setSuppliers(data as Supplier[]);
-    });
+    }, 'name');
+    const unsubCustomers = syncCollection('customers', setCustomers, 'orderName');
+    const unsubSuppliers = syncCollection('suppliers', setSuppliers, 'name');
     const unsubJournal = syncCollection('journalEntries', setJournalEntries);
     const unsubPurchases = syncCollection('purchases', setPurchases);
     
@@ -282,6 +274,9 @@ function MainApp() {
         setBusinessProfile(docSnap.data() as any);
       }
       setIsCloudSyncing(false);
+    }, (error) => {
+      console.error("Sync error for profile:", error);
+      handleFirestoreError(error, OperationType.GET, `users/${SHARED_BUSINESS_ID}/profile/data`);
     });
 
     return () => {
