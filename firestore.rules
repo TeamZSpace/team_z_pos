@@ -74,6 +74,11 @@ service cloud.firestore {
       return hasRequiredFields(['name']) && data.name is string;
     }
 
+    function isValidBackup(data) {
+      return hasRequiredFields(['id', 'timestamp', 'createdBy', 'data']) &&
+             data.id is string && data.timestamp is string && data.createdBy is string && data.data is map;
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -129,6 +134,12 @@ service cloud.firestore {
     match /users/{businessId}/profile/data {
       allow read: if isAuthorized();
       allow create, update: if isAuthorized() && isValidProfile(request.resource.data);
+      allow delete: if isAuthorized();
+    }
+
+    match /users/{businessId}/backups/{backupId} {
+      allow read: if isAuthorized();
+      allow create, update: if isAuthorized() && isValidBackup(request.resource.data);
       allow delete: if isAuthorized();
     }
     

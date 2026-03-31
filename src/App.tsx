@@ -22,7 +22,8 @@ import {
   RefreshCw,
   LogOut,
   Cloud,
-  CloudOff
+  CloudOff,
+  Database
 } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { ProfitLossDashboard } from './components/ProfitLossDashboard';
@@ -223,6 +224,38 @@ function MainApp() {
     } catch (error) {
       console.error('Sync error details:', error);
       toast.error('Sync လုပ်ဆောင်ချက် မအောင်မြင်ပါ။ အင်တာနက် ချိတ်ဆက်မှု သို့မဟုတ် URL မှန်ကန်မှုကို ပြန်စစ်ပေးပါ။');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleCloudBackup = async () => {
+    if (!user) return;
+    setIsSyncing(true);
+    try {
+      const backupId = `backup_${new Date().getTime()}`;
+      const backupData = {
+        id: backupId,
+        timestamp: new Date().toISOString(),
+        createdBy: user.email,
+        data: {
+          products,
+          sales,
+          expenses,
+          categories,
+          customers,
+          suppliers,
+          purchases,
+          journalEntries,
+          businessProfile
+        }
+      };
+      
+      await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'backups', backupId), backupData);
+      toast.success('Cloud Backup successfully created in Firebase!');
+    } catch (error) {
+      console.error('Cloud backup error:', error);
+      toast.error('Failed to create cloud backup.');
     } finally {
       setIsSyncing(false);
     }
@@ -1133,7 +1166,10 @@ function MainApp() {
                   <CardContent>
                     <div className="grid gap-6 sm:grid-cols-2">
                       <div className="space-y-4">
-                        <h3 className="font-medium">Cloud Sync</h3>
+                        <h3 className="font-medium flex items-center gap-2">
+                          <Cloud className="h-4 w-4 text-emerald-600" />
+                          Cloud Sync (Google Sheets)
+                        </h3>
                         <p className="text-sm text-zinc-500">Backup all your records to your connected Google Sheet.</p>
                         <Button 
                           className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -1141,6 +1177,20 @@ function MainApp() {
                           disabled={isSyncing}
                         >
                           {isSyncing ? 'Syncing...' : 'Sync to Google Sheets'}
+                        </Button>
+                      </div>
+                      <div className="space-y-4">
+                        <h3 className="font-medium flex items-center gap-2">
+                          <Database className="h-4 w-4 text-blue-600" />
+                          Cloud Backup (Firebase)
+                        </h3>
+                        <p className="text-sm text-zinc-500">Create a secure snapshot of your data in the cloud database.</p>
+                        <Button 
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                          onClick={handleCloudBackup}
+                          disabled={isSyncing}
+                        >
+                          {isSyncing ? 'Backing up...' : 'Manual Cloud Backup'}
                         </Button>
                       </div>
                       <div className="space-y-4">

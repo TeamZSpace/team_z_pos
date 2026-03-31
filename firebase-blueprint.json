@@ -131,6 +131,18 @@
         "googleSheetUrl": { "type": "string" }
       },
       "required": ["name"]
+    },
+    "Backup": {
+      "title": "Backup",
+      "description": "A cloud backup of all business data",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "data": { "type": "object" }
+      },
+      "required": ["id", "timestamp", "createdBy", "data"]
     }
   },
   "firestore": {
@@ -142,6 +154,7 @@
     "/users/{businessId}/expenses/{expenseId}": { "schema": "Expense", "description": "Expenses for a business" },
     "/users/{businessId}/journalEntries/{entryId}": { "schema": "JournalEntry", "description": "Journal entries for a business" },
     "/users/{businessId}/purchases/{purchaseId}": { "schema": "Purchase", "description": "Purchases for a business" },
-    "/users/{businessId}/profile/data": { "schema": "BusinessProfile", "description": "Profile data for a business" }
+    "/users/{businessId}/profile/data": { "schema": "BusinessProfile", "description": "Profile data for a business" },
+    "/users/{businessId}/backups/{backupId}": { "schema": "Backup", "description": "Cloud backups for a business" }
   }
 }
