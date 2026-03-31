@@ -229,9 +229,9 @@ function MainApp() {
     }
   };
 
-  const handleCloudBackup = async () => {
+  const handleCloudBackup = async (isAuto = false) => {
     if (!user) return;
-    setIsSyncing(true);
+    if (!isAuto) setIsSyncing(true);
     try {
       const backupId = `backup_${new Date().getTime()}`;
       const backupData = {
@@ -252,12 +252,17 @@ function MainApp() {
       };
       
       await setDoc(doc(db, 'users', SHARED_BUSINESS_ID, 'backups', backupId), backupData);
-      toast.success('Cloud Backup successfully created in Firebase!');
+      if (!isAuto) {
+        toast.success('Cloud Backup successfully created in Firebase!');
+      } else {
+        console.log('Auto backup created successfully');
+        localStorage.setItem('last_auto_backup', new Date().getTime().toString());
+      }
     } catch (error) {
       console.error('Cloud backup error:', error);
-      toast.error('Failed to create cloud backup.');
+      if (!isAuto) toast.error('Failed to create cloud backup.');
     } finally {
-      setIsSyncing(false);
+      if (!isAuto) setIsSyncing(false);
     }
   };
 
@@ -299,7 +304,7 @@ function MainApp() {
     };
 
     const unsubProducts = syncCollection('products', setProducts, 'createdAt');
-    const unsubSales = syncCollection('sales', setSales);
+    const unsubSales = syncCollection('sales', setSales, 'orderNumber');
     const unsubExpenses = syncCollection('expenses', setExpenses);
     const unsubCategories = syncCollection('categories', (data: any[]) => {
       const customCategories = data as Category[];
@@ -341,6 +346,23 @@ function MainApp() {
       unsubProfile();
     };
   }, [user]);
+
+  // Auto Backup Logic
+  useEffect(() => {
+    if (!user || !isAuthReady || products.length === 0) return;
+
+    const lastBackup = localStorage.getItem('last_auto_backup');
+    const now = new Date().getTime();
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+
+    if (!lastBackup || (now - parseInt(lastBackup)) > twentyFourHours) {
+      // Small delay to ensure all data is loaded
+      const timer = setTimeout(() => {
+        handleCloudBackup(true);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [user, isAuthReady, products.length]);
 
   const handleLogout = () => {
     logout();
@@ -567,18 +589,24 @@ function MainApp() {
     // Use the selected sale date for order number generation
     const saleDateObj = saleData.saleDate ? new Date(saleData.saleDate) : new Date(saleData.date);
     
-    // Count existing orders for this specific month
-    const sameMonthOrders = sales.filter(s => {
-      const sDate = s.saleDate ? new Date(s.saleDate) : new Date(s.date);
-      return sDate.getFullYear() === saleDateObj.getFullYear() &&
-             sDate.getMonth() === saleDateObj.getMonth();
-    });
+    // Find the highest sequence number for this month to ensure stable order numbers
+    const monthPrefix = `${String(saleDateObj.getMonth() + 1).padStart(2, '0')}${String(saleDateObj.getFullYear()).slice(-2)}`;
+    const sameMonthOrders = sales.filter(s => s.orderNumber?.startsWith(monthPrefix));
+    
+    let nextSequence = 0;
+    if (sameMonthOrders.length > 0) {
+      const sequences = sameMonthOrders.map(s => {
+        const seqStr = s.orderNumber.slice(4); // month(2) + year(2) = 4 chars
+        return parseInt(seqStr) || 0;
+      });
+      nextSequence = Math.max(...sequences);
+    }
     
     const saleId = generateUUID();
     const newSale: Sale = {
       ...saleData,
       id: saleId,
-      orderNumber: generateOrderNumber(saleDateObj, sameMonthOrders.length),
+      orderNumber: generateOrderNumber(saleDateObj, nextSequence),
     };
     
     try {
@@ -1185,9 +1213,10 @@ function MainApp() {
                           Cloud Backup (Firebase)
                         </h3>
                         <p className="text-sm text-zinc-500">Create a secure snapshot of your data in the cloud database.</p>
+                        <p className="text-[10px] text-emerald-600 font-medium italic">Auto-backup is active (every 24 hours).</p>
                         <Button 
                           className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                          onClick={handleCloudBackup}
+                          onClick={() => handleCloudBackup()}
                           disabled={isSyncing}
                         >
                           {isSyncing ? 'Backing up...' : 'Manual Cloud Backup'}

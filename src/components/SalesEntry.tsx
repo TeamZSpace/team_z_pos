@@ -86,7 +86,7 @@ export const SalesEntry = ({ products, onAddSale, onUpdateSale, onDeleteSale, sa
       customer: customerInfo,
       totalRevenue,
       totalCost,
-      date: new Date().toISOString(),
+      date: editingSaleId ? sales.find(s => s.id === editingSaleId)?.date || new Date().toISOString() : new Date().toISOString(),
       saleDate: customerInfo.saleDate,
       deliveryDate: customerInfo.deliveryDate,
     };
@@ -138,15 +138,24 @@ export const SalesEntry = ({ products, onAddSale, onUpdateSale, onDeleteSale, sa
     );
   });
 
-  const nextOrderNumber = generateOrderNumber(
-    customerInfo.saleDate || new Date(),
-    sales.filter(s => {
-      const sDate = s.saleDate ? new Date(s.saleDate) : new Date(s.date);
-      const targetDate = new Date(customerInfo.saleDate || new Date());
-      return sDate.getFullYear() === targetDate.getFullYear() &&
-             sDate.getMonth() === targetDate.getMonth();
-    }).length
-  );
+  const getNextOrderNumber = () => {
+    const targetDate = new Date(customerInfo.saleDate || new Date());
+    const monthPrefix = `${String(targetDate.getMonth() + 1).padStart(2, '0')}${String(targetDate.getFullYear()).slice(-2)}`;
+    const sameMonthOrders = sales.filter(s => s.orderNumber?.startsWith(monthPrefix));
+    
+    let nextSequence = 0;
+    if (sameMonthOrders.length > 0) {
+      const sequences = sameMonthOrders.map(s => {
+        const seqStr = s.orderNumber.slice(4);
+        return parseInt(seqStr) || 0;
+      });
+      nextSequence = Math.max(...sequences);
+    }
+    
+    return generateOrderNumber(targetDate, nextSequence);
+  };
+
+  const nextOrderNumber = getNextOrderNumber();
 
   return (
     <div className="space-y-6">
@@ -369,6 +378,7 @@ export const SalesEntry = ({ products, onAddSale, onUpdateSale, onDeleteSale, sa
                   <TableHead>Date</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead>Items</TableHead>
+                  <TableHead>Payment</TableHead>
                   <TableHead>Address</TableHead>
                   <TableHead>Delivery Date</TableHead>
                   <TableHead>Total</TableHead>
@@ -409,6 +419,11 @@ export const SalesEntry = ({ products, onAddSale, onUpdateSale, onDeleteSale, sa
                             </span>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="text-[10px] whitespace-nowrap">
+                          {sale.customer?.paymentMethod || 'KPay'}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-xs max-w-[150px] truncate" title={sale.customer?.address}>
                         {sale.customer?.address || '-'}
