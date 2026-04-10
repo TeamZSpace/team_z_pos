@@ -1,160 +1,170 @@
 {
   "entities": {
-    "Supplier": {
-      "title": "Supplier",
-      "description": "A supplier of products",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "phone": { "type": "string" }
-      },
-      "required": ["id", "name", "phone"]
-    },
-    "Category": {
-      "title": "Category",
-      "description": "A product category",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "parentId": { "type": "string" }
-      },
-      "required": ["id", "name"]
-    },
     "Product": {
       "title": "Product",
-      "description": "An inventory item",
+      "description": "Inventory products for supplements and skin care.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "category": { "type": "string" },
-        "subCategory": { "type": "string" },
-        "costPrice": { "type": "number" },
-        "shippingPrice": { "type": "number" },
-        "sellingPrice": { "type": "number" },
-        "stock": { "type": "number" },
-        "madeIn": { "type": "string" },
-        "supplierId": { "type": "string" },
-        "createdAt": { "type": "string" }
+        "name": { "type": "string", "description": "Product name" },
+        "productCode": { "type": "string", "description": "Unique product code or SKU" },
+        "brand": { "type": "string" },
+        "dosage": { "type": "string" },
+        "unitCount": { "type": "string" },
+        "dosageForm": { "type": "string" },
+        "categoryId": { "type": "string", "description": "Reference to Category" },
+        "supplierId": { "type": "string", "description": "Reference to Supplier" },
+        "landedCost": { "type": "number", "description": "Cost including shipping" },
+        "sellingPrice": { "type": "number", "description": "Retail price" },
+        "margin": { "type": "number", "description": "Profit margin" },
+        "stock": { "type": "number", "description": "Current stock level" },
+        "expiryDate": { "type": "string", "format": "date", "description": "Product expiry date" },
+        "purchaseDate": { "type": "string", "format": "date", "description": "Last purchase date" }
       },
-      "required": ["id", "name", "category", "costPrice", "sellingPrice", "stock", "createdAt"]
-    },
-    "Customer": {
-      "title": "Customer",
-      "description": "A customer who has made a purchase",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "facebookName": { "type": "string" },
-        "orderName": { "type": "string" },
-        "phone": { "type": "string" },
-        "address": { "type": "string" }
-      },
-      "required": ["id", "phone"]
-    },
-    "Sale": {
-      "title": "Sale",
-      "description": "A sales transaction",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "orderNumber": { "type": "string" },
-        "items": { "type": "array" },
-        "customer": { "type": "object" },
-        "totalRevenue": { "type": "number" },
-        "totalCost": { "type": "number" },
-        "date": { "type": "string" },
-        "saleDate": { "type": "string" },
-        "deliveryDate": { "type": "string" },
-        "paymentVoucherUrl": { "type": "string" }
-      },
-      "required": ["id", "orderNumber", "items", "customer", "totalRevenue", "totalCost", "date"]
-    },
-    "Expense": {
-      "title": "Expense",
-      "description": "A business expense",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "type": { "type": "string" },
-        "amount": { "type": "number" },
-        "description": { "type": "string" },
-        "date": { "type": "string" },
-        "voucherUrl": { "type": "string" }
-      },
-      "required": ["id", "type", "amount", "date"]
-    },
-    "JournalEntry": {
-      "title": "Journal Entry",
-      "description": "An accounting journal entry",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "date": { "type": "string" },
-        "debit_account_id": { "type": "string" },
-        "credit_account_id": { "type": "string" },
-        "amount": { "type": "number" },
-        "reference_type": { "type": "string" },
-        "description": { "type": "string" },
-        "reference_id": { "type": "string" },
-        "contact_id": { "type": "string" }
-      },
-      "required": ["id", "date", "debit_account_id", "credit_account_id", "amount", "reference_type", "description"]
+      "required": ["name", "landedCost", "sellingPrice", "stock"]
     },
     "Purchase": {
       "title": "Purchase",
-      "description": "A purchase of inventory",
+      "description": "Inventory purchase records.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
         "productId": { "type": "string" },
-        "productName": { "type": "string" },
+        "supplierId": { "type": "string" },
         "quantity": { "type": "number" },
-        "costPrice": { "type": "number" },
-        "shippingPrice": { "type": "number" },
-        "totalAmount": { "type": "number" },
-        "date": { "type": "string" },
-        "supplierId": { "type": "string" }
+        "unitCost": { "type": "number" },
+        "shipping": { "type": "number" },
+        "totalAmount": { "type": "number" }
       },
-      "required": ["id", "productId", "productName", "quantity", "costPrice", "totalAmount", "date"]
+      "required": ["date", "productId", "quantity", "totalAmount"]
     },
-    "BusinessProfile": {
-      "title": "Business Profile",
-      "description": "Information about the business",
+    "Sale": {
+      "title": "Sale",
+      "description": "Customer sales records.",
+      "type": "object",
+      "properties": {
+        "orderNumber": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "customerId": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": { "type": "string" },
+              "quantity": { "type": "number" },
+              "price": { "type": "number" }
+            }
+          }
+        },
+        "paymentMethod": { "type": "string" },
+        "address": { "type": "string" },
+        "deliveryDate": { "type": "string", "format": "date" },
+        "totalAmount": { "type": "number" }
+      },
+      "required": ["orderNumber", "date", "customerId", "items", "totalAmount"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "CRM customer records.",
+      "type": "object",
+      "properties": {
+        "facebookName": { "type": "string" },
+        "orderName": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "points": { "type": "number", "description": "Loyalty points" },
+        "orderCount": { "type": "number", "description": "Total number of orders" },
+        "lastOrderDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["facebookName"]
+    },
+    "Supplier": {
+      "title": "Supplier",
+      "description": "Product suppliers.",
       "type": "object",
       "properties": {
         "name": { "type": "string" },
-        "address": { "type": "string" },
+        "contactPerson": { "type": "string" },
         "phone": { "type": "string" },
-        "googleSheetUrl": { "type": "string" }
+        "email": { "type": "string" },
+        "address": { "type": "string" }
       },
       "required": ["name"]
     },
-    "Backup": {
-      "title": "Backup",
-      "description": "A cloud backup of all business data",
+    "Category": {
+      "title": "Category",
+      "description": "Product categories.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "timestamp": { "type": "string" },
-        "createdBy": { "type": "string" },
-        "data": { "type": "object" }
+        "name": { "type": "string" },
+        "parent": { "type": "string", "description": "Reference to parent Category ID" }
       },
-      "required": ["id", "timestamp", "createdBy", "data"]
+      "required": ["name"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Business expenses.",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date-time" },
+        "category": { "type": "string" },
+        "amount": { "type": "number" },
+        "description": { "type": "string" }
+      },
+      "required": ["date", "amount", "category"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Company settings.",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "openingCash": { "type": "number", "description": "Initial cash on hand" }
+      }
+    },
+    "ProductMaster": {
+      "title": "Product Master",
+      "description": "Master list of product names and codes.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "productCode": { "type": "string" },
+        "brand": { "type": "string" },
+        "category": { "type": "string" },
+        "dosage": { "type": "string" },
+        "unitCount": { "type": "string" },
+        "dosageForm": { "type": "string" },
+        "type": { "type": "string", "enum": ["Packing", "Travel"], "description": "Product type (Packing or Travel)" }
+      },
+      "required": ["name", "productCode", "type"]
+    },
+    "Backup": {
+      "title": "Backup",
+      "description": "Database backup records.",
+      "type": "object",
+      "properties": {
+        "timestamp": { "type": "string", "format": "date-time" },
+        "data": { "type": "object", "description": "Serialized backup data" },
+        "totalRecords": { "type": "number" },
+        "collections": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["success", "failed"] },
+        "isAuto": { "type": "boolean" }
+      },
+      "required": ["timestamp", "data", "status"]
     }
   },
   "firestore": {
-    "/users/{businessId}/suppliers/{supplierId}": { "schema": "Supplier", "description": "Suppliers for a business" },
-    "/users/{businessId}/categories/{categoryId}": { "schema": "Category", "description": "Categories for a business" },
-    "/users/{businessId}/products/{productId}": { "schema": "Product", "description": "Products for a business" },
-    "/users/{businessId}/customers/{customerId}": { "schema": "Customer", "description": "Customers for a business" },
-    "/users/{businessId}/sales/{saleId}": { "schema": "Sale", "description": "Sales for a business" },
-    "/users/{businessId}/expenses/{expenseId}": { "schema": "Expense", "description": "Expenses for a business" },
-    "/users/{businessId}/journalEntries/{entryId}": { "schema": "JournalEntry", "description": "Journal entries for a business" },
-    "/users/{businessId}/purchases/{purchaseId}": { "schema": "Purchase", "description": "Purchases for a business" },
-    "/users/{businessId}/profile/data": { "schema": "BusinessProfile", "description": "Profile data for a business" },
-    "/users/{businessId}/backups/{backupId}": { "schema": "Backup", "description": "Cloud backups for a business" }
+    "/products": { "schema": "Product", "description": "Inventory products" },
+    "/purchases": { "schema": "Purchase", "description": "Purchase history" },
+    "/sales": { "schema": "Sale", "description": "Sales history" },
+    "/customers": { "schema": "Customer", "description": "CRM data" },
+    "/suppliers": { "schema": "Supplier", "description": "Suppliers list" },
+    "/categories": { "schema": "Category", "description": "Product categories" },
+    "/expenses": { "schema": "Expense", "description": "Business expenses" },
+    "/settings": { "schema": "Settings", "description": "App settings" },
+    "/productMaster": { "schema": "ProductMaster", "description": "Master product list" },
+    "/backups": { "schema": "Backup", "description": "Database backups" }
   }
 }
